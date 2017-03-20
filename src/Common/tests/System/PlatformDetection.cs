@@ -10,8 +10,10 @@ using Xunit;
 
 namespace System
 {
-    public static class PlatformDetection
+    public static partial class PlatformDetection
     {
+        public static bool IsFullFramework => RuntimeInformation.FrameworkDescription.StartsWith(".NET Framework", StringComparison.OrdinalIgnoreCase);
+
         public static bool IsWindows { get; } = RuntimeInformation.IsOSPlatform(OSPlatform.Windows);
         public static bool IsWindows7 { get; } = IsWindows && GetWindowsVersion() == 6 && GetWindowsMinorVersion() == 1;
         public static bool IsWindows8x { get; } = IsWindows && GetWindowsVersion() == 6 && (GetWindowsMinorVersion() == 2 || GetWindowsMinorVersion() == 3);
@@ -95,7 +97,7 @@ namespace System
         public static bool IsWindowsSubsystemForLinux => m_isWindowsSubsystemForLinux.Value;
         public static bool IsNotWindowsSubsystemForLinux => !IsWindowsSubsystemForLinux;
 
-        public static bool IsNotFedoraOrRedHat => !IsDistroAndVersion("fedora") && !IsDistroAndVersion("rhel");
+        public static bool IsNotFedoraOrRedHatOrCentos => !IsDistroAndVersion("fedora") && !IsDistroAndVersion("rhel") && !IsDistroAndVersion("centos");
 
         private static bool GetIsWindowsSubsystemForLinux()
         {
@@ -148,8 +150,6 @@ namespace System
 
             return false;
         }
-
-        public static Version OSXKernelVersion { get; } = GetOSXKernelVersion();
 
         private static IdVersionPair ParseOsReleaseFile()
         {
@@ -234,23 +234,6 @@ namespace System
 
             return -1;
         }
-
-        private static Version GetOSXKernelVersion()
-        {
-            if (IsOSX)
-            {
-                byte[] bytes = new byte[256];
-                IntPtr bytesLength = new IntPtr(bytes.Length);
-                Assert.Equal(0, sysctlbyname("kern.osrelease", bytes, ref bytesLength, null, IntPtr.Zero));
-                string versionString = Encoding.UTF8.GetString(bytes);
-                return Version.Parse(versionString);
-            }
-
-            return new Version(0, 0, 0);
-        }
-
-        [DllImport("libc", SetLastError = true)]
-        private static extern int sysctlbyname(string ctlName, byte[] oldp, ref IntPtr oldpLen, byte[] newp, IntPtr newpLen);
 
         [DllImport("ntdll.dll")]
         private static extern int RtlGetVersion(out RTL_OSVERSIONINFOEX lpVersionInformation);

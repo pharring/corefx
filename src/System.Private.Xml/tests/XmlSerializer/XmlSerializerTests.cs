@@ -12,9 +12,6 @@ using System.Text;
 using System.Threading;
 using System.Xml;
 using System.Xml.Linq;
-#if !NET_NATIVE
-using System.Xml.Schema;
-#endif
 using System.Xml.Serialization;
 using Xunit;
 
@@ -1524,8 +1521,6 @@ string.Format(@"<?xml version=""1.0"" encoding=""utf-8""?>
         Assert.Equal(0, serializers.Length);
     }
 
-#if NET_NATIVE
-#endif
     [Fact]
     public static void Xml_ConstructorWithXmlRootAttr()
     {
@@ -1541,8 +1536,6 @@ string.Format(@"<?xml version=""1.0"" encoding=""utf-8""?>
         Assert.True(expected.SequenceEqual(actual));
     }
 
-#if NET_NATIVE
-#endif
     [Fact]
     public static void Xml_ConstructorWithXmlAttributeOverrides()
     {
@@ -1880,7 +1873,7 @@ string.Format(@"<?xml version=""1.0"" encoding=""utf-8""?>
     }
 
     [Fact]
-    [ActiveIssue("fails when using CodeGen as well")]
+    [ActiveIssue(16752)] //fails when using CodeGen as well
     public static void Xml_BaseClassAndDerivedClass2WithSameProperty()
     {
         var value = new DerivedClassWithSameProperty2() { DateTimeProperty = new DateTime(100, DateTimeKind.Utc), IntProperty = 5, StringProperty = "TestString", ListProperty = new List<string>() };
@@ -2539,13 +2532,24 @@ string.Format(@"<?xml version=""1.0"" encoding=""utf-8""?>
             writer.WriteStartElement("root");
             ser.Serialize(writer, value);
             writer.WriteEndElement();
+            writer.Flush();
             ms.Position = 0;
 
-            string expectedOutput = "<root><SoapEncodedTestType2 xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" id=\"id1\"><TestType3 href=\"#id2\" /></SoapEncodedTestType2><SoapEncodedTestType3 id=\"id2\" d2p1:type=\"SoapEncodedTestType3\" xmlns:d2p1=\"http://www.w3.org/2001/XMLSchema-instance\"><StringValue xmlns:q1=\"http://www.w3.org/2001/XMLSchema\" d2p1:type=\"q1:string\">foo</StringValue></SoapEncodedTestType3>";
+            string expectedOutput = "<root><SoapEncodedTestType2 xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" id=\"id1\"><TestType3 href=\"#id2\" /></SoapEncodedTestType2><SoapEncodedTestType3 id=\"id2\" d2p1:type=\"SoapEncodedTestType3\" xmlns:d2p1=\"http://www.w3.org/2001/XMLSchema-instance\"><StringValue xmlns:q1=\"http://www.w3.org/2001/XMLSchema\" d2p1:type=\"q1:string\">foo</StringValue></SoapEncodedTestType3></root>";
             string actualOutput = new StreamReader(ms).ReadToEnd();
             Utils.CompareResult result = Utils.Compare(expectedOutput, actualOutput);
             Assert.True(result.Equal, string.Format("{1}{0}Test failed for input: {2}{0}Expected: {3}{0}Actual: {4}",
                 Environment.NewLine, result.ErrorMessage, value, expectedOutput, actualOutput));
+
+            ms.Position = 0;
+            using (var reader = new XmlTextReader(ms))
+            {
+                reader.ReadStartElement("root");
+                var actual = (SoapEncodedTestType2)ser.Deserialize(reader);
+                Assert.NotNull(actual);
+                Assert.NotNull(actual.TestType3);
+                Assert.Equal(value.TestType3.StringValue, actual.TestType3.StringValue);
+            }
         }
     }
 
@@ -2744,11 +2748,11 @@ string.Format(@"<?xml version=""1.0"" encoding=""utf-8""?>
     }
 
     [Fact]
-    [ActiveIssue(15523)]
     public static void SoapEncodedSerialization_IncludeType()
     {
         var soapImporter = new SoapReflectionImporter();
         soapImporter.IncludeType(typeof(MySpecialOrder));
+        soapImporter.IncludeType(typeof(MySpecialOrder2));
         XmlTypeMapping myTypeMapping = soapImporter.ImportTypeMapping(typeof(MyOrder));
         var ser = new XmlSerializer(myTypeMapping);
         var value = new MySpecialOrder()
@@ -2801,7 +2805,6 @@ string.Format(@"<?xml version=""1.0"" encoding=""utf-8""?>
     }
 
     [Fact]
-    [ActiveIssue(15525)]
     public static void SoapEncodedSerializationTest_Array()
     {
         XmlTypeMapping myTypeMapping = new SoapReflectionImporter().ImportTypeMapping(typeof(MyGroup));
@@ -2829,14 +2832,17 @@ string.Format(@"<?xml version=""1.0"" encoding=""utf-8""?>
             using (var reader = new XmlTextReader(ms))
             {
                 reader.ReadStartElement("wrapper");
-                var deserialized = (MyGroup)ser.Deserialize(reader);
-                Assert.Equal(value.GroupName, deserialized.GroupName);
-                Assert.Equal(value.MyItems.Count(), deserialized.MyItems.Count());
+                var actual = (MyGroup)ser.Deserialize(reader);
+                Assert.Equal(value.GroupName, actual.GroupName);
+                Assert.Equal(value.MyItems.Count(), actual.MyItems.Count());
+                for(int i = 0; i < value.MyItems.Count(); i++)
+                {
+                    Assert.Equal(value.MyItems[i].ItemName, actual.MyItems[i].ItemName);
+                }
             }
         }
     }
 
-    [ActiveIssue(15525)]
     [Fact]
     public static void SoapEncodedSerializationTest_List()
     {
@@ -2865,9 +2871,13 @@ string.Format(@"<?xml version=""1.0"" encoding=""utf-8""?>
             using (var reader = new XmlTextReader(ms))
             {
                 reader.ReadStartElement("wrapper");
-                var deserialized = (MyGroup2)ser.Deserialize(reader);
-                Assert.Equal(value.GroupName, deserialized.GroupName);
-                Assert.Equal(value.MyItems.Count(), deserialized.MyItems.Count());
+                var actual = (MyGroup2)ser.Deserialize(reader);
+                Assert.Equal(value.GroupName, actual.GroupName);
+                Assert.Equal(value.MyItems.Count(), actual.MyItems.Count());
+                for (int i = 0; i < value.MyItems.Count(); i++)
+                {
+                    Assert.Equal(value.MyItems[i].ItemName, actual.MyItems[i].ItemName);
+                }
             }
         }
     }
@@ -2990,6 +3000,87 @@ string.Format(@"<?xml version=""1.0"" encoding=""utf-8""?>
         var cg = new MycodeGenerator();
         Assert.NotNull(cg);
     }
+
+#if ReflectionOnly
+    [ActiveIssue(10675)]
+#endif
+    [Fact]
+    public static void XmlMembersMapping_PrimitiveValue()
+    {
+        string memberName = "value";
+        var getDataRequestBodyValue = 3;
+        var getDataRequestBodyActual = RoundTripWithXmlMembersMapping<int>(getDataRequestBodyValue, memberName, "<?xml version=\"1.0\"?>\r\n<value xmlns=\"http://tempuri.org/\">3</value>");
+
+        Assert.NotNull(getDataRequestBodyActual);
+        Assert.Equal(getDataRequestBodyValue, getDataRequestBodyActual);
+    }
+
+#if ReflectionOnly
+    [ActiveIssue(10675)]
+#endif
+    [Fact]
+    public static void XmlMembersMapping_SimpleType()
+    {
+        string memberName = "GetData";
+        var getDataRequestBodyValue = new GetDataRequestBody(3);
+        var getDataRequestBodyActual = RoundTripWithXmlMembersMapping<GetDataRequestBody>(getDataRequestBodyValue, memberName, "<?xml version=\"1.0\"?>\r\n<GetData xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns=\"http://tempuri.org/\">\r\n  <value>3</value>\r\n</GetData>");
+
+        Assert.NotNull(getDataRequestBodyActual);
+        Assert.Equal(getDataRequestBodyValue.value, getDataRequestBodyActual.value);
+    }
+
+#if ReflectionOnly
+    [ActiveIssue(10675)]
+#endif
+    [Fact]
+    public static void XmlMembersMapping_CompositeType()
+    {
+        string memberName = "GetDataUsingDataContract";
+        var requestBodyValue = new GetDataUsingDataContractRequestBody() { composite = new CompositeTypeForXmlMembersMapping() { BoolValue = true, StringValue = "foo" } };
+        var requestBodyActual = RoundTripWithXmlMembersMapping<GetDataUsingDataContractRequestBody>(requestBodyValue, memberName, "<?xml version=\"1.0\"?>\r\n<GetDataUsingDataContract xmlns:xsi=\"http://www.w3.org/2001/XMLSchema-instance\" xmlns:xsd=\"http://www.w3.org/2001/XMLSchema\" xmlns=\"http://tempuri.org/\">\r\n  <composite>\r\n    <BoolValue>true</BoolValue>\r\n    <StringValue>foo</StringValue>\r\n  </composite>\r\n</GetDataUsingDataContract>");
+
+        Assert.NotNull(requestBodyActual);
+        Assert.Equal(requestBodyValue.composite.BoolValue, requestBodyActual.composite.BoolValue);
+        Assert.Equal(requestBodyValue.composite.StringValue, requestBodyActual.composite.StringValue);
+    }
+
+    private static T RoundTripWithXmlMembersMapping<T>(object requestBodyValue, string memberName, string baseline, bool skipStringCompare = false)
+    {
+        var member = new XmlReflectionMember();
+        member.MemberName = memberName;
+        member.MemberType = typeof(T);
+        member.XmlAttributes = new XmlAttributes();
+        var elementAttribute = new XmlElementAttribute();
+        elementAttribute.ElementName = memberName;
+        string ns = "http://tempuri.org/";
+        elementAttribute.Namespace = ns;
+        member.XmlAttributes.XmlElements.Add(elementAttribute);
+
+        var importer = new XmlReflectionImporter(null, ns);
+        var membersMapping = importer.ImportMembersMapping(null, ns, new XmlReflectionMember[] { member }, false);
+        var serializer = XmlSerializer.FromMappings(new XmlMapping[] { membersMapping })[0];
+        using (var ms = new MemoryStream())
+        {
+            object[] value = new object[] { requestBodyValue };
+            serializer.Serialize(ms, value);
+            ms.Flush();
+            ms.Position = 0;
+            string actualOutput = new StreamReader(ms).ReadToEnd();
+            if (!skipStringCompare)
+            {
+                Utils.CompareResult result = Utils.Compare(baseline, actualOutput);
+                Assert.True(result.Equal, string.Format("{1}{0}Test failed for input: {2}{0}Expected: {3}{0}Actual: {4}",
+                    Environment.NewLine, result.ErrorMessage, value, baseline, actualOutput));
+            }
+
+            ms.Position = 0;
+            var actual = serializer.Deserialize(ms) as object[];
+            Assert.NotNull(actual);
+            Assert.Equal(value.Length, actual.Length);
+            return (T)actual[0];
+        }
+    }
+
     private static Stream GenerateStreamFromString(string s)
     {
         var stream = new MemoryStream();
