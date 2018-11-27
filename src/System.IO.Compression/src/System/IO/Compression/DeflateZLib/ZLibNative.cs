@@ -1,8 +1,7 @@
-// Licensed to the .NET Foundation under one or more agreements.
+﻿// Licensed to the .NET Foundation under one or more agreements.
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System.Diagnostics.Contracts;
 using System.Runtime.InteropServices;
 using System.Security;
 
@@ -138,6 +137,9 @@ namespace System.IO.Compression
                                                           // More is faster and better compression with more memory usage.
         public const int Deflate_NoCompressionMemLevel = 7;
 
+        public const byte GZip_Header_ID1 = 31;
+        public const byte GZip_Header_ID2 = 139;
+
         /**
          * Do not remove the nested typing of types inside of <code>System.IO.Compression.ZLibNative</code>.
          * This was done on purpose to:
@@ -168,14 +170,12 @@ namespace System.IO.Compression
         /// <code>false</code>, which can for instance happen if the underlying ZLib <code>XxxxEnd</code>
         /// routines return an failure error code.
         /// </summary>
-        [SecurityCritical]
         public sealed class ZLibStreamHandle : SafeHandle
         {
             public enum State { NotInitialized, InitializedForDeflate, InitializedForInflate, Disposed }
 
             private ZStream _zStream;
 
-            [SecurityCritical]
             private volatile State _initializationState;
 
 
@@ -191,19 +191,15 @@ namespace System.IO.Compression
 
             public override bool IsInvalid
             {
-                [SecurityCritical]
                 get { return handle == new IntPtr(-1); }
             }
 
             public State InitializationState
             {
-                [Pure]
-                [SecurityCritical]
                 get { return _initializationState; }
             }
 
 
-            [SecurityCritical]
             protected override bool ReleaseHandle()
             {
                 switch (InitializationState)
@@ -218,30 +214,28 @@ namespace System.IO.Compression
 
             public IntPtr NextIn
             {
-                [SecurityCritical] get { return _zStream.nextIn; }
-                [SecurityCritical] set { _zStream.nextIn = value; }
+                get { return _zStream.nextIn; }
+                set { _zStream.nextIn = value; }
             }
 
             public uint AvailIn
             {
-                [SecurityCritical] get { return _zStream.availIn; }
-                [SecurityCritical] set { _zStream.availIn = value; }
+                get { return _zStream.availIn; }
+                set { _zStream.availIn = value; }
             }
 
             public IntPtr NextOut
             {
-                [SecurityCritical] get { return _zStream.nextOut; }
-                [SecurityCritical] set { _zStream.nextOut = value; }
+                get { return _zStream.nextOut; }
+                set { _zStream.nextOut = value; }
             }
 
             public uint AvailOut
             {
-                [SecurityCritical] get { return _zStream.availOut; }
-                [SecurityCritical] set { _zStream.availOut = value; }
+                get { return _zStream.availOut; }
+                set { _zStream.availOut = value; }
             }
 
-            [Pure]
-            [SecurityCritical]
             private void EnsureNotDisposed()
             {
                 if (InitializationState == State.Disposed)
@@ -249,8 +243,6 @@ namespace System.IO.Compression
             }
 
 
-            [Pure]
-            [SecurityCritical]
             private void EnsureState(State requiredState)
             {
                 if (InitializationState != requiredState)
@@ -258,7 +250,6 @@ namespace System.IO.Compression
             }
 
 
-            [SecurityCritical]
             public ErrorCode DeflateInit2_(CompressionLevel level, int windowBits, int memLevel, CompressionStrategy strategy)
             {
                 EnsureNotDisposed();
@@ -271,7 +262,6 @@ namespace System.IO.Compression
             }
 
 
-            [SecurityCritical]
             public ErrorCode Deflate(FlushCode flush)
             {
                 EnsureNotDisposed();
@@ -280,7 +270,6 @@ namespace System.IO.Compression
             }
 
 
-            [SecurityCritical]
             public ErrorCode DeflateEnd()
             {
                 EnsureNotDisposed();
@@ -293,7 +282,6 @@ namespace System.IO.Compression
             }
 
 
-            [SecurityCritical]
             public ErrorCode InflateInit2_(int windowBits)
             {
                 EnsureNotDisposed();
@@ -306,7 +294,6 @@ namespace System.IO.Compression
             }
 
 
-            [SecurityCritical]
             public ErrorCode Inflate(FlushCode flush)
             {
                 EnsureNotDisposed();
@@ -315,7 +302,6 @@ namespace System.IO.Compression
             }
 
 
-            [SecurityCritical]
             public ErrorCode InflateEnd()
             {
                 EnsureNotDisposed();
@@ -327,35 +313,10 @@ namespace System.IO.Compression
                 return errC;
             }
 
-            /// <summary>
-            /// This function is equivalent to inflateEnd followed by inflateInit.
-            /// The stream will keep attributes that may have been set by inflateInit2.
-            /// </summary>
-            [SecurityCritical]
-            public ErrorCode InflateReset(int windowBits)
-            {
-                EnsureNotDisposed();
-                EnsureState(State.InitializedForInflate);
-
-                ErrorCode errC = Interop.zlib.InflateEnd(ref _zStream);
-                if (errC != ErrorCode.Ok)
-                {
-                    _initializationState = State.Disposed;
-                    return errC;
-                }
-
-                errC = Interop.zlib.InflateInit2_(ref _zStream, windowBits);
-                _initializationState = State.InitializedForInflate;
-
-                return errC;
-            }
-
             // This can work even after XxflateEnd().
-            [SecurityCritical]
             public string GetErrorMessage() => _zStream.msg != ZNullPtr ? Marshal.PtrToStringAnsi(_zStream.msg) : string.Empty;
         }
 
-        [SecurityCritical]
         public static ErrorCode CreateZLibStreamForDeflate(out ZLibStreamHandle zLibStreamHandle, CompressionLevel level,
             int windowBits, int memLevel, CompressionStrategy strategy)
         {
@@ -364,7 +325,6 @@ namespace System.IO.Compression
         }
 
 
-        [SecurityCritical]
         public static ErrorCode CreateZLibStreamForInflate(out ZLibStreamHandle zLibStreamHandle, int windowBits)
         {
             zLibStreamHandle = new ZLibStreamHandle();

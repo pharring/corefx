@@ -2,9 +2,9 @@
 <Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
   <PropertyGroup>
     <BuildConfigurations>
-      netstandard1.1;
-      netstandard;
       netcoreapp-Windows_NT;
+      netcoreappaot-Windows_NT;
+      netcoreappaot-WebAssembly;
       netcoreapp-Unix;
       uap-Windows_NT;
       uapaot-Windows_NT;

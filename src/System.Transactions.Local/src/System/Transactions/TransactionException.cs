@@ -11,6 +11,7 @@ namespace System.Transactions
     /// Summary description for TransactionException.
     /// </summary>
     [Serializable]
+    [System.Runtime.CompilerServices.TypeForwardedFrom("System.Transactions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")]
     public class TransactionException : SystemException
     {
         internal static bool IncludeDistributedTxId(Guid distributedTxId)
@@ -23,7 +24,7 @@ namespace System.Transactions
             TransactionsEtwProvider etwLog = TransactionsEtwProvider.Log;
             if (etwLog.IsEnabled())
             {
-                etwLog.TransactionExceptionTrace(TransactionExceptionType.TransactionException, message, innerException==null?String.Empty:innerException.ToString());
+                etwLog.TransactionExceptionTrace(TransactionExceptionType.TransactionException, message, innerException==null?string.Empty:innerException.ToString());
             }
 
             return new TransactionException(message, innerException);
@@ -34,7 +35,7 @@ namespace System.Transactions
             TransactionsEtwProvider etwLog = TransactionsEtwProvider.Log;
             if (etwLog.IsEnabled())
             {
-                etwLog.TransactionExceptionTrace(TransactionExceptionType.TransactionException, message, innerException==null?String.Empty:innerException.ToString());
+                etwLog.TransactionExceptionTrace(TransactionExceptionType.TransactionException, message, innerException==null?string.Empty:innerException.ToString());
             }
 
             return new TransactionException(message, innerException);
@@ -53,7 +54,7 @@ namespace System.Transactions
             TransactionsEtwProvider etwLog = TransactionsEtwProvider.Log;
             if (etwLog.IsEnabled())
             {
-                etwLog.TransactionExceptionTrace(TransactionExceptionType.InvalidOperationException, messagewithTxId, innerException==null?String.Empty:innerException.ToString());
+                etwLog.TransactionExceptionTrace(TransactionExceptionType.InvalidOperationException, messagewithTxId, innerException==null?string.Empty:innerException.ToString());
             }
             return new InvalidOperationException(messagewithTxId, innerException);
         }
@@ -63,7 +64,7 @@ namespace System.Transactions
             TransactionsEtwProvider etwLog = TransactionsEtwProvider.Log;
             if (etwLog.IsEnabled())
             {
-                etwLog.TransactionExceptionTrace(traceSource, TransactionExceptionType.InvalidOperationException, message, innerException==null?String.Empty:innerException.ToString());
+                etwLog.TransactionExceptionTrace(traceSource, TransactionExceptionType.InvalidOperationException, message, innerException==null?string.Empty:innerException.ToString());
             }
 
             return new InvalidOperationException(message, innerException);
@@ -173,6 +174,7 @@ namespace System.Transactions
     /// Summary description for TransactionAbortedException.
     /// </summary>
     [Serializable]
+    [System.Runtime.CompilerServices.TypeForwardedFrom("System.Transactions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")]
     public class TransactionAbortedException : TransactionException
     {
         internal static new TransactionAbortedException Create(string message, Exception innerException, Guid distributedTxId)
@@ -189,7 +191,7 @@ namespace System.Transactions
             TransactionsEtwProvider etwLog = TransactionsEtwProvider.Log;
             if (etwLog.IsEnabled())
             {
-                etwLog.TransactionExceptionTrace(TransactionExceptionType.TransactionAbortedException, message, innerException==null?String.Empty:innerException.ToString());
+                etwLog.TransactionExceptionTrace(TransactionExceptionType.TransactionAbortedException, message, innerException==null?string.Empty:innerException.ToString());
             }
 
             return new TransactionAbortedException(message, innerException);
@@ -248,6 +250,7 @@ namespace System.Transactions
     /// Summary description for TransactionInDoubtException.
     /// </summary>
     [Serializable]
+    [System.Runtime.CompilerServices.TypeForwardedFrom("System.Transactions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")]
     public class TransactionInDoubtException : TransactionException
     {
         internal static new TransactionInDoubtException Create(TraceSourceType traceSource, string message, Exception innerException, Guid distributedTxId)
@@ -264,7 +267,7 @@ namespace System.Transactions
             TransactionsEtwProvider etwLog = TransactionsEtwProvider.Log;
             if (etwLog.IsEnabled())
             {
-                etwLog.TransactionExceptionTrace(traceSource, TransactionExceptionType.TransactionInDoubtException, message, innerException==null?String.Empty:innerException.ToString());
+                etwLog.TransactionExceptionTrace(traceSource, TransactionExceptionType.TransactionInDoubtException, message, innerException==null?string.Empty:innerException.ToString());
             }
 
             return new TransactionInDoubtException(message, innerException);
@@ -308,6 +311,7 @@ namespace System.Transactions
     /// Summary description for TransactionManagerCommunicationException.
     /// </summary>
     [Serializable]
+    [System.Runtime.CompilerServices.TypeForwardedFrom("System.Transactions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")]
     public class TransactionManagerCommunicationException : TransactionException
     {
         internal static new TransactionManagerCommunicationException Create(string message, Exception innerException)
@@ -315,7 +319,7 @@ namespace System.Transactions
             TransactionsEtwProvider etwLog = TransactionsEtwProvider.Log;
             if (etwLog.IsEnabled())
             {
-                etwLog.TransactionExceptionTrace(TransactionExceptionType.TransactionManagerCommunicationException, message, innerException==null?String.Empty:innerException.ToString());
+                etwLog.TransactionExceptionTrace(TransactionExceptionType.TransactionManagerCommunicationException, message, innerException==null?string.Empty:innerException.ToString());
             }
 
             return new TransactionManagerCommunicationException(message, innerException);
@@ -363,8 +367,8 @@ namespace System.Transactions
         }
     }
 
-
     [Serializable]
+    [System.Runtime.CompilerServices.TypeForwardedFrom("System.Transactions, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")]
     public class TransactionPromotionException : TransactionException
     {
         /// <summary>

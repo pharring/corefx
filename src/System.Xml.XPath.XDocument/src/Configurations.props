@@ -4,8 +4,8 @@
     <BuildConfigurations>
       uap-Windows_NT;
       netcoreapp-Windows_NT;
+      netcoreappaot-WebAssembly;
       netcoreapp-Unix;
-      netfx;
     </BuildConfigurations>
   </PropertyGroup>
 </Project>

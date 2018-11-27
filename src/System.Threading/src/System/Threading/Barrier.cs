@@ -21,6 +21,7 @@ namespace System.Threading
     /// The exception that is thrown when the post-phase action of a <see cref="Barrier"/> fails.
     /// </summary>
     [Serializable]
+    [System.Runtime.CompilerServices.TypeForwardedFrom("System, Version=4.0.0.0, Culture=neutral, PublicKeyToken=b77a5c561934e089")]
     public class BarrierPostPhaseException : Exception
     {
         /// <summary>
@@ -132,7 +133,6 @@ namespace System.Threading
         private ExecutionContext _ownerThreadContext;
 
         // The EC callback that invokes the post phase action
-        [SecurityCritical]
         private static ContextCallback s_invokePostPhaseAction;
 
         // Post phase action after each phase
@@ -535,7 +535,7 @@ namespace System.Threading
         /// </exception>
         /// <exception cref="T:System.ObjectDisposedException">The current instance has already been
         /// disposed.</exception>
-        public Boolean SignalAndWait(TimeSpan timeout)
+        public bool SignalAndWait(TimeSpan timeout)
         {
             return SignalAndWait(timeout, new CancellationToken());
         }
@@ -562,9 +562,9 @@ namespace System.Threading
         /// canceled.</exception>
         /// <exception cref="T:System.ObjectDisposedException">The current instance has already been
         /// disposed.</exception>
-        public Boolean SignalAndWait(TimeSpan timeout, CancellationToken cancellationToken)
+        public bool SignalAndWait(TimeSpan timeout, CancellationToken cancellationToken)
         {
-            Int64 totalMilliseconds = (Int64)timeout.TotalMilliseconds;
+            long totalMilliseconds = (long)timeout.TotalMilliseconds;
             if (totalMilliseconds < -1 || totalMilliseconds > int.MaxValue)
             {
                 throw new System.ArgumentOutOfRangeException(nameof(timeout), timeout,
@@ -661,12 +661,10 @@ namespace System.Threading
                 {
                     if (SetCurrentTotal(currentTotal, 0, total, !sense))
                     {
-#if !uapaot
                         if (CdsSyncEtwBCLProvider.Log.IsEnabled())
                         {
                             CdsSyncEtwBCLProvider.Log.Barrier_PhaseFinished(sense, CurrentPhaseNumber);
                         }
-#endif
                         FinishPhase(sense);
                         return true;
                     }
@@ -757,7 +755,6 @@ namespace System.Threading
         /// last arrival thread
         /// </summary>
         /// <param name="observedSense">The current phase sense</param>
-        [SecuritySafeCritical]
         private void FinishPhase(bool observedSense)
         {
             // Execute the PHA in try/finally block to reset the variables back in case of it threw an exception
@@ -807,7 +804,6 @@ namespace System.Threading
         /// Helper method to call the post phase action
         /// </summary>
         /// <param name="obj"></param>
-        [SecurityCritical]
         private static void InvokePostPhaseAction(object obj)
         {
             var thisBarrier = (Barrier)obj;

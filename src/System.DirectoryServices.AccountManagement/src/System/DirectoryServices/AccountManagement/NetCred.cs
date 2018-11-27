@@ -31,7 +31,6 @@ namespace System.DirectoryServices.AccountManagement
 
         public string ParsedUserName
         {
-            [System.Security.SecurityCritical]
             get
             {
                 if (null == _parsedUserName)
@@ -45,7 +44,6 @@ namespace System.DirectoryServices.AccountManagement
 
         public string Domain
         {
-            [System.Security.SecurityCritical]
             get
             {
                 if (null == _parsedUserName)
@@ -57,7 +55,6 @@ namespace System.DirectoryServices.AccountManagement
             }
         }
 
-        [System.Security.SecurityCritical]
         private void SplitUsername(string username, ref string parsedUserName, ref string parsedDomainName)
         {
             // If the user has passed null creds then parsed components should also be null.
@@ -76,9 +73,9 @@ namespace System.DirectoryServices.AccountManagement
             int result = UnsafeNativeMethods.CredUIParseUserName(
                                                 username,
                                                  splitUsername,
-                                                 (System.UInt32)splitUsername.Capacity,
+                                                 (uint)splitUsername.Capacity,
                                                  splitDomain,
-                                                 (System.UInt32)splitDomain.Capacity);
+                                                 (uint)splitDomain.Capacity);
 
             // If CredUiParseUsername fails then username format must have been in a format it does not expect.
             // Just pass then entire username as the user passed it with a null domain string.

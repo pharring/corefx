@@ -2,24 +2,14 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using System;
 using System.Text;
 using System.Net;
 using System.Collections;
 using System.Security.Principal;
 using System.Security.Permissions;
-using System.DirectoryServices;
 using System.Runtime.InteropServices;
 using System.Diagnostics;
 using System.Globalization;
-
-#pragma warning disable 618
-[assembly:SecurityPermission(SecurityAction.RequestMinimum, UnmanagedCode = true),
-SecurityPermission(SecurityAction.RequestMinimum, SkipVerification = true),
-EnvironmentPermission(SecurityAction.RequestMinimum, Unrestricted = true),
-]
-
-#pragma warning restore 618
 
 namespace System.DirectoryServices.ActiveDirectory
 {
@@ -145,7 +135,7 @@ namespace System.DirectoryServices.ActiveDirectory
                         if (dsNameResultItem.status == NativeMethods.DS_NAME_ERROR_NO_SYNTACTICAL_MAPPING ||
                             dsNameResultItem.name == null)
                         {
-                            throw new ArgumentException(SR.InvalidDNFormat, "distinguishedName");
+                            throw new ArgumentException(SR.InvalidDNFormat, nameof(distinguishedName));
                         }
                         else if (dsNameResultItem.status != 0)
                         {
@@ -187,7 +177,7 @@ namespace System.DirectoryServices.ActiveDirectory
             }
             else if (result == NativeMethods.DS_NAME_ERROR_NO_SYNTACTICAL_MAPPING)
             {
-                throw new ArgumentException(SR.InvalidDNFormat, "distinguishedName");
+                throw new ArgumentException(SR.InvalidDNFormat, nameof(distinguishedName));
             }
             else
             {
@@ -278,7 +268,7 @@ namespace System.DirectoryServices.ActiveDirectory
             int index = dn.IndexOf(',');
             if (index == -1)
             {
-                throw new ArgumentException(SR.InvalidDNFormat, "dn");
+                throw new ArgumentException(SR.InvalidDNFormat, nameof(dn));
             }
 
             // get parent name simply by removing the first component
@@ -321,7 +311,7 @@ namespace System.DirectoryServices.ActiveDirectory
             {
                 if (resCol.Count != 2)
                 {
-                    throw new ActiveDirectoryOperationException(String.Format(CultureInfo.CurrentCulture, SR.NoHostNameOrPortNumber , dn));
+                    throw new ActiveDirectoryOperationException(SR.Format(SR.NoHostNameOrPortNumber , dn));
                 }
 
                 foreach (SearchResult res in resCol)
@@ -347,7 +337,7 @@ namespace System.DirectoryServices.ActiveDirectory
 
             if ((ldapPort == -1) || (dnsHostName == null))
             {
-                throw new ActiveDirectoryOperationException(String.Format(CultureInfo.CurrentCulture, SR.NoHostNameOrPortNumber , dn));
+                throw new ActiveDirectoryOperationException(SR.Format(SR.NoHostNameOrPortNumber , dn));
             }
 
             return dnsHostName + ":" + ldapPort;
@@ -380,7 +370,7 @@ namespace System.DirectoryServices.ActiveDirectory
             {
                 if (resCol.Count != 2)
                 {
-                    throw new ActiveDirectoryOperationException(String.Format(CultureInfo.CurrentCulture, SR.NoHostNameOrPortNumber , dn));
+                    throw new ActiveDirectoryOperationException(SR.Format(SR.NoHostNameOrPortNumber , dn));
                 }
 
                 foreach (SearchResult res in resCol)
@@ -407,7 +397,7 @@ namespace System.DirectoryServices.ActiveDirectory
 
             if ((ldapPort == -1) || (sslPort == -1) || (dnsHostName == null))
             {
-                throw new ActiveDirectoryOperationException(String.Format(CultureInfo.CurrentCulture, SR.NoHostNameOrPortNumber , dn));
+                throw new ActiveDirectoryOperationException(SR.Format(SR.NoHostNameOrPortNumber , dn));
             }
 
             return dnsHostName + ":" + ldapPort + ":" + sslPort;
@@ -471,19 +461,19 @@ namespace System.DirectoryServices.ActiveDirectory
                 string[] subComponents = Split(components[i], '=');
                 if (subComponents.GetLength(0) != 2)
                 {
-                    throw new ArgumentException(SR.InvalidDNFormat, "distinguishedName");
+                    throw new ArgumentException(SR.InvalidDNFormat, nameof(distinguishedName));
                 }
 
                 dnComponents[i].Name = subComponents[0].Trim();
                 if (dnComponents[i].Name.Length == 0)
                 {
-                    throw new ArgumentException(SR.InvalidDNFormat, "distinguishedName");
+                    throw new ArgumentException(SR.InvalidDNFormat, nameof(distinguishedName));
                 }
 
                 dnComponents[i].Value = subComponents[1].Trim();
                 if (dnComponents[i].Value.Length == 0)
                 {
-                    throw new ArgumentException(SR.InvalidDNFormat, "distinguishedName");
+                    throw new ArgumentException(SR.InvalidDNFormat, nameof(distinguishedName));
                 }
             }
             return dnComponents;
@@ -572,7 +562,7 @@ namespace System.DirectoryServices.ActiveDirectory
                     // if we are still in quoted string, the format is invalid
                     if (inQuotedString)
                     {
-                        throw new ArgumentException(SR.InvalidDNFormat, "distinguishedName");
+                        throw new ArgumentException(SR.InvalidDNFormat, nameof(distinguishedName));
                     }
 
                     // we need to end the last token
@@ -713,7 +703,7 @@ namespace System.DirectoryServices.ActiveDirectory
                 {
                     foreach (string supportedCapability in rootDSE.Properties[PropertyManager.SupportedCapabilities])
                     {
-                        if (String.Compare(supportedCapability, SupportedCapability.ADOid, StringComparison.OrdinalIgnoreCase) == 0)
+                        if (string.Equals(supportedCapability, SupportedCapability.ADOid, StringComparison.OrdinalIgnoreCase))
                         {
                             result = true;
                             break;
@@ -724,7 +714,7 @@ namespace System.DirectoryServices.ActiveDirectory
                 {
                     foreach (string supportedCapability in rootDSE.Properties[PropertyManager.SupportedCapabilities])
                     {
-                        if (String.Compare(supportedCapability, SupportedCapability.ADAMOid, StringComparison.OrdinalIgnoreCase) == 0)
+                        if (string.Equals(supportedCapability, SupportedCapability.ADAMOid, StringComparison.OrdinalIgnoreCase))
                         {
                             result = true;
                             break;
@@ -735,8 +725,8 @@ namespace System.DirectoryServices.ActiveDirectory
                 {
                     foreach (string supportedCapability in rootDSE.Properties[PropertyManager.SupportedCapabilities])
                     {
-                        if (String.Compare(supportedCapability, SupportedCapability.ADAMOid, StringComparison.OrdinalIgnoreCase) == 0 ||
-                            String.Compare(supportedCapability, SupportedCapability.ADOid, StringComparison.OrdinalIgnoreCase) == 0)
+                        if (string.Equals(supportedCapability, SupportedCapability.ADAMOid, StringComparison.OrdinalIgnoreCase) ||
+                            string.Equals(supportedCapability, SupportedCapability.ADOid, StringComparison.OrdinalIgnoreCase))
                         {
                             result = true;
                             break;
@@ -808,13 +798,13 @@ namespace System.DirectoryServices.ActiveDirectory
 
             string transportName = component[0].Value;
 
-            if (String.Compare(transportName, "IP", StringComparison.OrdinalIgnoreCase) == 0)
+            if (string.Equals(transportName, "IP", StringComparison.OrdinalIgnoreCase))
                 return ActiveDirectoryTransportType.Rpc;
-            else if (String.Compare(transportName, "SMTP", StringComparison.OrdinalIgnoreCase) == 0)
+            else if (string.Equals(transportName, "SMTP", StringComparison.OrdinalIgnoreCase))
                 return ActiveDirectoryTransportType.Smtp;
             else
             {
-                string message = String.Format(CultureInfo.CurrentCulture, SR.UnknownTransport , transportName);
+                string message = SR.Format(SR.UnknownTransport , transportName);
                 throw new ActiveDirectoryOperationException(message);
             }
         }
@@ -1097,7 +1087,7 @@ namespace System.DirectoryServices.ActiveDirectory
         //
         internal static Hashtable GetValuesWithRangeRetrieval(DirectoryEntry searchRootEntry, string filter, ArrayList propertiesWithRangeRetrieval, ArrayList propertiesWithoutRangeRetrieval, SearchScope searchScope)
         {
-            ADSearcher searcher = new ADSearcher(searchRootEntry, filter, new string[] { }, searchScope, false /* paged search */, false /* cache results */);
+            ADSearcher searcher = new ADSearcher(searchRootEntry, filter, Array.Empty<string>(), searchScope, false /* paged search */, false /* cache results */);
             SearchResult res = null;
             int rangeStart = 0;
             Hashtable results = new Hashtable();
@@ -1460,7 +1450,7 @@ namespace System.DirectoryServices.ActiveDirectory
 
                 string[] propertiesToLoad2 = new string[5];
 
-                ADSearcher searcher2 = new ADSearcher(searchRootEntry, filter2, new string[] { }, SearchScope.Subtree);
+                ADSearcher searcher2 = new ADSearcher(searchRootEntry, filter2, Array.Empty<string>(), SearchScope.Subtree);
                 SearchResultCollection resCol = null;
                 bool needToContinueRangeRetrieval = false;
                 ArrayList ntdsaNamesForRangeRetrieval = new ArrayList();
@@ -1549,7 +1539,7 @@ namespace System.DirectoryServices.ActiveDirectory
                                             // multivalues attribute we can stop here.
                                             foundPartitionEntry = true;
 
-                                            if (String.Compare(dnString, 10, "0", 0, 1, StringComparison.OrdinalIgnoreCase) == 0)
+                                            if (string.Compare(dnString, 10, "0", 0, 1, StringComparison.OrdinalIgnoreCase) == 0)
                                             {
                                                 // this server has the partition fully instantiated
                                                 ntdsaNames.Add(ntdsaName);
@@ -1657,7 +1647,7 @@ namespace System.DirectoryServices.ActiveDirectory
                                         // find the property name with the range info
                                         foreach (string property in res.Properties.PropertyNames)
                                         {
-                                            if (String.Compare(property, 0, PropertyManager.MsDSHasInstantiatedNCs, 0, PropertyManager.MsDSHasInstantiatedNCs.Length, StringComparison.OrdinalIgnoreCase) == 0)
+                                            if (string.Compare(property, 0, PropertyManager.MsDSHasInstantiatedNCs, 0, PropertyManager.MsDSHasInstantiatedNCs.Length, StringComparison.OrdinalIgnoreCase) == 0)
                                             {
                                                 propertyName = property;
                                                 break;
@@ -1686,7 +1676,7 @@ namespace System.DirectoryServices.ActiveDirectory
                                         {
                                             foundPartitionEntry = true;
 
-                                            if (String.Compare(dnString, 10, "0", 0, 1, StringComparison.OrdinalIgnoreCase) == 0)
+                                            if (string.Compare(dnString, 10, "0", 0, 1, StringComparison.OrdinalIgnoreCase) == 0)
                                             {
                                                 ntdsaNames.Add(ntdsaName);
                                                 if (isADAM)
@@ -1746,11 +1736,11 @@ namespace System.DirectoryServices.ActiveDirectory
                     Debug.Fail(string.Format(CultureInfo.InvariantCulture, "ConfigurationSet::GetReplicaList - no dnsHostName information for replica {0}", ntdsaName));
                     if (isADAM)
                     {
-                        throw new ActiveDirectoryOperationException(String.Format(CultureInfo.CurrentCulture, SR.NoHostNameOrPortNumber , ntdsaName));
+                        throw new ActiveDirectoryOperationException(SR.Format(SR.NoHostNameOrPortNumber , ntdsaName));
                     }
                     else
                     {
-                        throw new ActiveDirectoryOperationException(String.Format(CultureInfo.CurrentCulture, SR.NoHostName , ntdsaName));
+                        throw new ActiveDirectoryOperationException(SR.Format(SR.NoHostName , ntdsaName));
                     }
                 }
 
@@ -1759,7 +1749,7 @@ namespace System.DirectoryServices.ActiveDirectory
                     if (serverPorts[ntdsaName] == null)
                     {
                         Debug.Fail(string.Format(CultureInfo.InvariantCulture, "ConfigurationSet::GetReplicaList - no port number  information for replica {0}", ntdsaName));
-                        throw new ActiveDirectoryOperationException(String.Format(CultureInfo.CurrentCulture, SR.NoHostNameOrPortNumber , ntdsaName));
+                        throw new ActiveDirectoryOperationException(SR.Format(SR.NoHostNameOrPortNumber , ntdsaName));
                     }
                 }
 
@@ -1907,11 +1897,11 @@ namespace System.DirectoryServices.ActiveDirectory
         {
             if (s1 == null)
             {
-                throw new ArgumentNullException("s1");
+                throw new ArgumentNullException(nameof(s1));
             }
             if (s2 == null)
             {
-                throw new ArgumentNullException("s2");
+                throw new ArgumentNullException(nameof(s2));
             }
             return Compare(s1.Substring(offset1, length1), s2.Substring(offset2, length2));
         }
@@ -1920,11 +1910,11 @@ namespace System.DirectoryServices.ActiveDirectory
         {
             if (s1 == null)
             {
-                throw new ArgumentNullException("s1");
+                throw new ArgumentNullException(nameof(s1));
             }
             if (s2 == null)
             {
-                throw new ArgumentNullException("s2");
+                throw new ArgumentNullException(nameof(s2));
             }
             return Compare(s1.Substring(offset1, length1), s2.Substring(offset2, length2), compareFlags);
         }
@@ -2003,7 +1993,6 @@ namespace System.DirectoryServices.ActiveDirectory
             return s_NTAuthorityString;
         }
 
-        [System.Security.SecurityCritical]
         internal static bool IsSamUser()
         {
             //
@@ -2067,7 +2056,6 @@ namespace System.DirectoryServices.ActiveDirectory
             }
         }
 
-        [System.Security.SecuritySafeCritical]
 
         internal static IntPtr GetCurrentUserSid()
         {
@@ -2101,18 +2089,12 @@ namespace System.DirectoryServices.ActiveDirectory
                                         ))
                         {
                             int lastError = Marshal.GetLastWin32Error();
-                            throw new InvalidOperationException(
-                                            String.Format(CultureInfo.CurrentCulture,
-                                                          SR.UnableToOpenToken,
-                                                          lastError));
+                            throw new InvalidOperationException(SR.Format(SR.UnableToOpenToken, lastError));
                         }
                     }
                     else
                     {
-                        throw new InvalidOperationException(
-                                        String.Format(CultureInfo.CurrentCulture,
-                                                      SR.UnableToOpenToken,
-                                                      error));
+                        throw new InvalidOperationException(SR.Format(SR.UnableToOpenToken, error));
                     }
                 }
 
@@ -2133,7 +2115,7 @@ namespace System.DirectoryServices.ActiveDirectory
                 if ((getTokenInfoError = Marshal.GetLastWin32Error()) != 122) // ERROR_INSUFFICIENT_BUFFER
                 {
                     throw new InvalidOperationException(
-                                    String.Format(CultureInfo.CurrentCulture, SR.UnableToRetrieveTokenInfo, getTokenInfoError));
+                                    SR.Format(SR.UnableToRetrieveTokenInfo, getTokenInfoError));
                 }
 
                 // Allocate the necessary buffer.
@@ -2152,7 +2134,7 @@ namespace System.DirectoryServices.ActiveDirectory
                 {
                     int lastError = Marshal.GetLastWin32Error();
                     throw new InvalidOperationException(
-                                    String.Format(CultureInfo.CurrentCulture, SR.UnableToRetrieveTokenInfo, lastError));
+                                    SR.Format(SR.UnableToRetrieveTokenInfo, lastError));
                 }
 
                 // Retrieve the user's SID from the user info
@@ -2169,7 +2151,7 @@ namespace System.DirectoryServices.ActiveDirectory
                 {
                     int lastError = Marshal.GetLastWin32Error();
                     throw new InvalidOperationException(
-                                    String.Format(CultureInfo.CurrentCulture, SR.UnableToRetrieveTokenInfo, lastError));
+                                    SR.Format(SR.UnableToRetrieveTokenInfo, lastError));
                 }
 
                 return pCopyOfUserSid;
@@ -2184,7 +2166,6 @@ namespace System.DirectoryServices.ActiveDirectory
             }
         }
 
-        [System.Security.SecuritySafeCritical]
         internal static IntPtr GetMachineDomainSid()
         {
             IntPtr pPolicyHandle = IntPtr.Zero;
@@ -2205,9 +2186,7 @@ namespace System.DirectoryServices.ActiveDirectory
 
                 if (err != 0)
                 {
-                    throw new InvalidOperationException(String.Format(CultureInfo.CurrentCulture,
-                                                               SR.UnableToRetrievePolicy,
-                                                               NativeMethods.LsaNtStatusToWinError(err)));
+                    throw new InvalidOperationException(SR.Format(SR.UnableToRetrievePolicy, NativeMethods.LsaNtStatusToWinError(err)));
                 }
 
                 Debug.Assert(pPolicyHandle != IntPtr.Zero);
@@ -2218,9 +2197,7 @@ namespace System.DirectoryServices.ActiveDirectory
 
                 if (err != 0)
                 {
-                    throw new InvalidOperationException(String.Format(CultureInfo.CurrentCulture,
-                                                               SR.UnableToRetrievePolicy,
-                                                               NativeMethods.LsaNtStatusToWinError(err)));
+                    throw new InvalidOperationException(SR.Format(SR.UnableToRetrievePolicy, NativeMethods.LsaNtStatusToWinError(err)));
                 }
 
                 Debug.Assert(pBuffer != IntPtr.Zero);
@@ -2237,7 +2214,7 @@ namespace System.DirectoryServices.ActiveDirectory
                 {
                     int lastError = Marshal.GetLastWin32Error();
                     throw new InvalidOperationException(
-                                    String.Format(CultureInfo.CurrentCulture, SR.UnableToRetrievePolicy, lastError));
+                                    SR.Format(SR.UnableToRetrievePolicy, lastError));
                 }
 
                 return pCopyOfSid;
@@ -2255,8 +2232,7 @@ namespace System.DirectoryServices.ActiveDirectory
             }
         }
 
-        [System.Security.SecuritySafeCritical]
-        internal static bool IsMachineDC(String computerName)
+        internal static bool IsMachineDC(string computerName)
         {
             IntPtr dsRoleInfoPtr = IntPtr.Zero;
             int err = -1;
@@ -2271,7 +2247,7 @@ namespace System.DirectoryServices.ActiveDirectory
                 if (err != 0)
                 {
                     throw new InvalidOperationException(
-                                    String.Format(
+                                    string.Format(
                                             CultureInfo.CurrentCulture,
                                             SR.UnableToRetrieveDomainInfo,
                                             err));
@@ -2290,7 +2266,6 @@ namespace System.DirectoryServices.ActiveDirectory
             }
         }
 
-        [System.Security.SecuritySafeCritical]
         internal static SidType ClassifySID(IntPtr pSid)
         {
             Debug.Assert(UnsafeNativeMethods.IsValidSid(pSid));
@@ -2316,7 +2291,7 @@ namespace System.DirectoryServices.ActiveDirectory
                   (identAuth.b5 == 0) &&
                   (identAuth.b6 == 5))
             {
-                // No, so it can't be a account or builtin SID.
+                // No, so it can't be an account or builtin SID.
                 // Probably something like \Everyone or \LOCAL.
                 return SidType.FakeObject;
             }
@@ -2336,7 +2311,6 @@ namespace System.DirectoryServices.ActiveDirectory
             }
         }
 
-        [System.Security.SecuritySafeCritical]
 
         internal static int GetLastRidFromSid(IntPtr pSid)
         {
@@ -2348,7 +2322,6 @@ namespace System.DirectoryServices.ActiveDirectory
             return lastRid;
         }
 
-        [System.Security.SecurityCritical]
         internal static int GetLastRidFromSid(byte[] sid)
         {
             IntPtr pSid = IntPtr.Zero;
@@ -2369,7 +2342,6 @@ namespace System.DirectoryServices.ActiveDirectory
 
         // The caller must call Marshal.FreeHGlobal on the returned
         // value to free it.
-        [System.Security.SecurityCritical]
         internal static IntPtr ConvertByteArrayToIntPtr(byte[] bytes)
         {
             IntPtr pBytes = IntPtr.Zero;

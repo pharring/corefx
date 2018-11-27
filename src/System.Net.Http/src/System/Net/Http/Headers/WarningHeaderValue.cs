@@ -88,7 +88,7 @@ namespace System.Net.Http.Headers
             if (_date.HasValue)
             {
                 sb.Append(" \"");
-                sb.Append(HttpRuleParser.DateToString(_date.Value));
+                sb.Append(HttpDateParser.DateToString(_date.Value));
                 sb.Append('\"');
             }
 
@@ -245,7 +245,7 @@ namespace System.Net.Http.Headers
                 return false;
             }
 
-            if (!HeaderUtilities.TryParseInt32(input.Substring(current, codeLength), out code))
+            if (!HeaderUtilities.TryParseInt32(input, current, codeLength, out code))
             {
                 Debug.Assert(false, "Unable to parse value even though it was parsed as <=3 digits string. Input: '" +
                     input + "', Current: " + current + ", CodeLength: " + codeLength);
@@ -301,7 +301,7 @@ namespace System.Net.Http.Headers
                 }
 
                 DateTimeOffset temp;
-                if (!HttpRuleParser.TryStringToDate(input.Substring(dateStartIndex, current - dateStartIndex), out temp))
+                if (!HttpDateParser.TryStringToDate(input.Substring(dateStartIndex, current - dateStartIndex), out temp))
                 {
                     return false;
                 }

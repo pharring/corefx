@@ -16,8 +16,9 @@ namespace System.Net.Sockets.Tests
         private readonly ITestOutputHelper _log;
 
         private IPAddress _serverAddress = IPAddress.IPv6Loopback;
-        // In the current directory
-        private const string TestFileName = "NCLTest.Socket.SendPacketsAsync.testpayload";
+        // Accessible directories for UWP app:
+        // C:\Users\<UserName>\AppData\Local\Packages\<ApplicationPackageName>\
+        private string TestFileName = Environment.GetEnvironmentVariable("LocalAppData") + @"\NCLTest.Socket.SendPacketsAsync.testpayload";
         private static int s_testFileSize = 1024;
 
         #region Additional test attributes
@@ -75,6 +76,7 @@ namespace System.Net.Sockets.Tests
             }
         }
 
+        [SkipOnTargetFramework(TargetFrameworkMonikers.NetFramework, "Bug in SendPacketsAsync that dereferences null SAEA argument")]
         [OuterLoop] // TODO: Issue #11345
         [Theory]
         [InlineData(SocketImplementationType.APM)]
@@ -87,12 +89,8 @@ namespace System.Net.Sockets.Tests
                 using (Socket sock = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp))
                 {
                     sock.Connect(new IPEndPoint(_serverAddress, port));
-
-                    ArgumentNullException ex = Assert.Throws<ArgumentNullException>(() =>
-                    {
-                        sock.SendPacketsAsync(null);
-                    });
-                    Assert.Equal("e", ex.ParamName);
+                    
+                    AssertExtensions.Throws<ArgumentNullException>("e", () => sock.SendPacketsAsync(null));
                 }
             }
         }
@@ -103,25 +101,20 @@ namespace System.Net.Sockets.Tests
             Socket socket = new Socket(AddressFamily.InterNetworkV6, SocketType.Stream, ProtocolType.Tcp);
             // Needs to be connected before send
 
-            ArgumentNullException ex = Assert.Throws<ArgumentNullException>(() =>
+            Assert.Throws<NotSupportedException>(() =>
             {
-                socket.SendPacketsAsync(new SocketAsyncEventArgs());
+                socket.SendPacketsAsync(new SocketAsyncEventArgs { SendPacketsElements = new SendPacketsElement[0] });
             });
-            Assert.Equal("e.SendPacketsElements", ex.ParamName);
         }
 
+        [SkipOnTargetFramework(TargetFrameworkMonikers.NetFramework, "Bug in SendPacketsAsync that dereferences null m_SendPacketsElementsInternal array")]
         [OuterLoop] // TODO: Issue #11345
         [Theory]
         [InlineData(SocketImplementationType.APM)]
         [InlineData(SocketImplementationType.Async)]
         public void NullList_Throws(SocketImplementationType type)
         {
-            ArgumentNullException ex = Assert.Throws<ArgumentNullException>(() =>
-            {
-                SendPackets(type, (SendPacketsElement[])null, SocketError.Success, 0);
-            });
-
-            Assert.Equal("e.SendPacketsElements", ex.ParamName);
+            AssertExtensions.Throws<ArgumentNullException>("e.SendPacketsElements", () => SendPackets(type, (SendPacketsElement[])null, SocketError.Success, 0));
         }
 
         [OuterLoop] // TODO: Issue #11345
@@ -278,9 +271,9 @@ namespace System.Net.Sockets.Tests
         [InlineData(SocketImplementationType.Async)]
         public void SendPacketsElement_EmptyFileName_Throws(SocketImplementationType type)
         {
-            Assert.Throws<ArgumentException>(() =>
+            AssertExtensions.Throws<ArgumentException>("path", null, () =>
             {
-                SendPackets(type, new SendPacketsElement(String.Empty), 0);
+                SendPackets(type, new SendPacketsElement(string.Empty), 0);
             });
         }
 
@@ -290,20 +283,21 @@ namespace System.Net.Sockets.Tests
         [PlatformSpecific(TestPlatforms.Windows)] // whitespace-only is a valid name on Unix
         public void SendPacketsElement_BlankFileName_Throws(SocketImplementationType type)
         {
-            Assert.Throws<ArgumentException>(() =>
+            AssertExtensions.Throws<ArgumentException>("path", null, () =>
             {
                 // Existence is validated on send
-                SendPackets(type, new SendPacketsElement(" \t  "), 0);
+                SendPackets(type, new SendPacketsElement("   "), 0);
             });
         }
 
         [Theory]
+        [ActiveIssue(27269)]
         [InlineData(SocketImplementationType.APM)]
         [InlineData(SocketImplementationType.Async)]
         [PlatformSpecific(TestPlatforms.Windows)] // valid filename chars on Unix
         public void SendPacketsElement_BadCharactersFileName_Throws(SocketImplementationType type)
         {
-            Assert.Throws<ArgumentException>(() =>
+            AssertExtensions.Throws<ArgumentException>("path", null, () =>
             {
                 // Existence is validated on send
                 SendPackets(type, new SendPacketsElement("blarkd@dfa?/sqersf"), 0);

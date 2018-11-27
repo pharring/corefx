@@ -2,49 +2,108 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Internal.Runtime.Augments;
-using Microsoft.Win32;
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics;
 using System.IO;
-using System.Runtime.InteropServices;
 using System.Text;
+using System.Runtime.InteropServices;
 
 namespace System
 {
     public static partial class Environment
     {
-        public static int ExitCode { get { return EnvironmentAugments.ExitCode; } set { EnvironmentAugments.ExitCode = value; } }
-
-        private static string ExpandEnvironmentVariablesCore(string name)
+        public static string UserName
         {
-            int currentSize = 100;
-            StringBuilder result = StringBuilderCache.Acquire(currentSize); // A somewhat reasonable default size
-
-            result.Length = 0;
-            int size = Interop.Kernel32.ExpandEnvironmentStringsW(name, result, currentSize);
-            if (size == 0)
+            get
             {
-                StringBuilderCache.Release(result);
-                Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
-            }
+                // 40 should be enough as we're asking for the SAM compatible name (DOMAIN\User).
+                // The max length should be 15 (domain) + 1 (separator) + 20 (name) + null. If for
+                // some reason it isn't, we'll grow the buffer.
 
-            while (size > currentSize)
-            {
-                currentSize = size;
-                result.Capacity = currentSize;
-                result.Length = 0;
+                // https://support.microsoft.com/en-us/help/909264/naming-conventions-in-active-directory-for-computers-domains-sites-and
+                // https://msdn.microsoft.com/en-us/library/ms679635.aspx
 
-                size = Interop.Kernel32.ExpandEnvironmentStringsW(name, result, currentSize);
-                if (size == 0)
+                Span<char> initialBuffer = stackalloc char[40];
+                var builder = new ValueStringBuilder(initialBuffer);
+                GetUserName(ref builder);
+
+                ReadOnlySpan<char> name = builder.AsSpan();
+                int index = name.IndexOf('\\');
+                if (index != -1)
                 {
-                    StringBuilderCache.Release(result);
-                    Marshal.ThrowExceptionForHR(Marshal.GetHRForLastWin32Error());
+                    // In the form of DOMAIN\User, cut off DOMAIN\
+                    name = name.Slice(index + 1);
+                }
+
+                return name.ToString();
+            }
+        }
+
+        private static void GetUserName(ref ValueStringBuilder builder)
+        {
+            uint size = 0;
+            while (Interop.Secur32.GetUserNameExW(Interop.Secur32.NameSamCompatible, ref builder.GetPinnableReference(), ref size) == Interop.BOOLEAN.FALSE)
+            {
+                if (Marshal.GetLastWin32Error() == Interop.Errors.ERROR_MORE_DATA)
+                {
+                    builder.EnsureCapacity(checked((int)size));
+                }
+                else
+                {
+                    builder.Length = 0;
+                    return;
                 }
             }
 
-            return StringBuilderCache.GetStringAndRelease(result);
+            builder.Length = (int)size;
+        }
+
+        public static string UserDomainName
+        {
+            get
+            {
+                // See the comment in UserName
+                Span<char> initialBuffer = stackalloc char[40];
+                var builder = new ValueStringBuilder(initialBuffer);
+                GetUserName(ref builder);
+
+                ReadOnlySpan<char> name = builder.AsSpan();
+                int index = name.IndexOf('\\');
+                if (index != -1)
+                {
+                    // In the form of DOMAIN\User, cut off \User and return
+                    return name.Slice(0, index).ToString();
+                }
+
+                // In theory we should never get use out of LookupAccountNameW as the above API should
+                // always return what we need. Can't find any clues in the historical sources, however.
+
+                // Domain names aren't typically long.
+                // https://support.microsoft.com/en-us/help/909264/naming-conventions-in-active-directory-for-computers-domains-sites-and
+                Span<char> initialDomainNameBuffer = stackalloc char[64];
+                var domainBuilder = new ValueStringBuilder(initialBuffer);
+                uint length = (uint)domainBuilder.Capacity;
+
+                // This API will fail to return the domain name without a buffer for the SID.
+                // SIDs are never over 68 bytes long.
+                Span<byte> sid = stackalloc byte[68];
+                uint sidLength = 68;
+
+                while (!Interop.Advapi32.LookupAccountNameW(null, ref builder.GetPinnableReference(), ref MemoryMarshal.GetReference(sid),
+                    ref sidLength, ref domainBuilder.GetPinnableReference(), ref length, out _))
+                {
+                    int error = Marshal.GetLastWin32Error();
+
+                    // The docs don't call this out clearly, but experimenting shows that the error returned is the following.
+                    if (error != Interop.Errors.ERROR_INSUFFICIENT_BUFFER)
+                    {
+                        throw new InvalidOperationException(Win32Marshal.GetMessage(error));
+                    }
+
+                    domainBuilder.EnsureCapacity((int)length);
+                }
+
+                domainBuilder.Length = (int)length;
+                return domainBuilder.ToString();
+            }
         }
 
         private static string GetFolderPathCore(SpecialFolder folder, SpecialFolderOption option)
@@ -213,175 +272,13 @@ namespace System
         {
             Guid folderId = new Guid(folderGuid);
 
-            string path;
-            int hr = Interop.Shell32.SHGetKnownFolderPath(folderId, (uint)option, IntPtr.Zero, out path);
+            int hr = Interop.Shell32.SHGetKnownFolderPath(folderId, (uint)option, IntPtr.Zero, out string path);
             if (hr != 0) // Not S_OK
             {
-                if (hr == Interop.Shell32.COR_E_PLATFORMNOTSUPPORTED)
-                {
-                    throw new PlatformNotSupportedException();
-                }
-                else
-                {
-                    return string.Empty;
-                }
+                return string.Empty;
             }
 
             return path;
         }
-
-        private static bool Is64BitOperatingSystemWhen32BitProcess
-        {
-            get
-            {
-                bool isWow64;
-                return Interop.Kernel32.IsWow64Process(Interop.Kernel32.GetCurrentProcess(), out isWow64) && isWow64;
-            }
-        }
-
-        public static string MachineName
-        {
-            get
-            {
-                string name = Interop.Kernel32.GetComputerName();
-                if (name == null)
-                {
-                    throw new InvalidOperationException(SR.InvalidOperation_ComputerName);
-                }
-                return name;
-            }
-        }
-
-        private static unsafe Lazy<OperatingSystem> s_osVersion = new Lazy<OperatingSystem>(() =>
-        {
-            var version = new Interop.Kernel32.OSVERSIONINFOEX { dwOSVersionInfoSize = sizeof(Interop.Kernel32.OSVERSIONINFOEX) };
-            if (!Interop.Kernel32.GetVersionExW(ref version))
-            {
-                throw new InvalidOperationException(SR.InvalidOperation_GetVersion);
-            }
-
-            return new OperatingSystem(
-                PlatformID.Win32NT,
-                new Version(version.dwMajorVersion, version.dwMinorVersion, version.dwBuildNumber, (version.wServicePackMajor << 16) | version.wServicePackMinor),
-                Marshal.PtrToStringUni((IntPtr)version.szCSDVersion));
-        });
-
-        public static int ProcessorCount
-        {
-            get
-            {
-                // First try GetLogicalProcessorInformationEx, caching the result as desktop/coreclr does.
-                // If that fails for some reason, fall back to a non-cached result from GetSystemInfo.
-                // (See SystemNative::GetProcessorCount in coreclr for a comparison.)
-                int pc = s_processorCountFromGetLogicalProcessorInformationEx.Value;
-                return pc != 0 ? pc : ProcessorCountFromSystemInfo;
-            }
-        }
-
-        private static readonly unsafe Lazy<int> s_processorCountFromGetLogicalProcessorInformationEx = new Lazy<int>(() =>
-        {
-            // Determine how much size we need for a call to GetLogicalProcessorInformationEx
-            uint len = 0;
-            if (!Interop.Kernel32.GetLogicalProcessorInformationEx(Interop.Kernel32.LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup, IntPtr.Zero, ref len) &&
-                Marshal.GetLastWin32Error() == Interop.Errors.ERROR_INSUFFICIENT_BUFFER)
-            {
-                // Allocate that much space
-                Debug.Assert(len > 0);
-                var buffer = new byte[len];
-                fixed (byte* bufferPtr = buffer)
-                {
-                    // Call GetLogicalProcessorInformationEx with the allocated buffer
-                    if (Interop.Kernel32.GetLogicalProcessorInformationEx(Interop.Kernel32.LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup, (IntPtr)bufferPtr, ref len))
-                    {
-                        // Walk each SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX in the buffer, where the Size of each dictates how
-                        // much space it's consuming.  For each group relation, count the number of active processors in each of its group infos.
-                        int processorCount = 0;
-                        byte* ptr = bufferPtr, endPtr = bufferPtr + len;
-                        while (ptr < endPtr)
-                        {
-                            var current = (Interop.Kernel32.SYSTEM_LOGICAL_PROCESSOR_INFORMATION_EX*)ptr;
-                            if (current->Relationship == Interop.Kernel32.LOGICAL_PROCESSOR_RELATIONSHIP.RelationGroup)
-                            {
-                                Interop.Kernel32.PROCESSOR_GROUP_INFO* groupInfo = &current->Group.GroupInfo;
-                                int groupCount = current->Group.ActiveGroupCount;
-                                for (int i = 0; i < groupCount; i++)
-                                {
-                                    processorCount += (groupInfo + i)->ActiveProcessorCount;
-                                }
-                            }
-                            ptr += current->Size;
-                        }
-                        return processorCount;
-                    }
-                }
-            }
-
-            return 0;
-        });
-
-        public static string SystemDirectory
-        {
-            get
-            {
-                StringBuilder sb = StringBuilderCache.Acquire(PathInternal.MaxShortPath);
-                if (Interop.Kernel32.GetSystemDirectoryW(sb, PathInternal.MaxShortPath) == 0)
-                {
-                    StringBuilderCache.Release(sb);
-                    throw Win32Marshal.GetExceptionForLastWin32Error();
-                }
-                return StringBuilderCache.GetStringAndRelease(sb);
-            }
-        }
-
-        public static string UserName
-        {
-            get
-            {
-                // Use GetUserNameExW, as GetUserNameW isn't available on all platforms, e.g. Win7
-                var domainName = new StringBuilder(1024);
-                uint domainNameLen = (uint)domainName.Capacity;
-                if (Interop.Secur32.GetUserNameExW(Interop.Secur32.NameSamCompatible, domainName, ref domainNameLen) == 1)
-                {
-                    string samName = domainName.ToString();
-                    int index = samName.IndexOf('\\');
-                    if (index != -1)
-                    {
-                        return samName.Substring(index + 1);
-                    }
-                }
-
-                return string.Empty;
-            }
-        }
-
-        public static string UserDomainName
-        {
-            get
-            {
-                var domainName = new StringBuilder(1024);
-                uint domainNameLen = (uint)domainName.Capacity;
-                if (Interop.Secur32.GetUserNameExW(Interop.Secur32.NameSamCompatible, domainName, ref domainNameLen) == 1)
-                {
-                    string samName = domainName.ToString();
-                    int index = samName.IndexOf('\\');
-                    if (index != -1)
-                    {
-                        return samName.Substring(0, index);
-                    }
-                }
-                domainNameLen = (uint)domainName.Capacity;
-
-                byte[] sid = new byte[1024];
-                int sidLen = sid.Length;
-                int peUse;
-                if (!Interop.Advapi32.LookupAccountNameW(null, UserName, sid, ref sidLen, domainName, ref domainNameLen, out peUse))
-                {
-                    throw new InvalidOperationException(Win32Marshal.GetExceptionForLastWin32Error().Message);
-                }
-
-                return domainName.ToString();
-            }
-        }
-
     }
 }

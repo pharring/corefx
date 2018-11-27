@@ -14,9 +14,6 @@ using System.Collections.Specialized;
 
 namespace System.DirectoryServices.AccountManagement
 {
-#pragma warning disable 618    // Have not migrated to v4 transparency yet
-    [System.Security.SecurityCritical(System.Security.SecurityCriticalScope.Everything)]
-#pragma warning restore 618
     internal partial class ADStoreCtx : StoreCtx
     {
         //
@@ -164,9 +161,9 @@ namespace System.DirectoryServices.AccountManagement
                     {
                         // Must be a property we don't support
                         throw new InvalidOperationException(
-                                    String.Format(
+                                    string.Format(
                                         CultureInfo.CurrentCulture,
-                                        StringResources.StoreCtxUnsupportedPropertyForQuery,
+                                        SR.StoreCtxUnsupportedPropertyForQuery,
                                         PropertyNamesExternal.GetExternalForm(filter.PropertyName)));
                     }
 
@@ -211,7 +208,7 @@ namespace System.DirectoryServices.AccountManagement
                 {
                     Debug.Fail("ADStoreCtx.GetObjectClassPortion: fell off end looking for " + principalType.ToString());
                     throw new InvalidOperationException(
-                                    String.Format(CultureInfo.CurrentCulture, StringResources.StoreCtxUnsupportedPrincipalTypeForQuery, principalType.ToString()));
+                                    string.Format(CultureInfo.CurrentCulture, SR.StoreCtxUnsupportedPrincipalTypeForQuery, principalType.ToString()));
                 }
                 StringBuilder SB = new StringBuilder();
                 SB.Append("(&(objectClass=");
@@ -463,7 +460,7 @@ namespace System.DirectoryServices.AccountManagement
             return sb.ToString();
         }
 
-        protected static bool IdentityClaimToFilter(string identity, string identityFormat, ref String filter, bool throwOnFail)
+        protected static bool IdentityClaimToFilter(string identity, string identityFormat, ref string filter, bool throwOnFail)
         {
             if (identity == null)
                 identity = "";
@@ -492,7 +489,7 @@ namespace System.DirectoryServices.AccountManagement
                             return false;
                     }
 
-                    Byte[] gByte = g.ToByteArray();
+                    byte[] gByte = g.ToByteArray();
 
                     StringBuilder stringguid = new StringBuilder();
 
@@ -506,7 +503,7 @@ namespace System.DirectoryServices.AccountManagement
                     if (ldapHexGuid == null)
                     {
                         if (throwOnFail)
-                            throw new ArgumentException(StringResources.StoreCtxGuidIdentityClaimBadFormat);
+                            throw new ArgumentException(SR.StoreCtxGuidIdentityClaimBadFormat);
                         else
                             return false;
                     }
@@ -539,7 +536,7 @@ namespace System.DirectoryServices.AccountManagement
 
                     if (index == identity.Length - 1)
                         if (throwOnFail)
-                            throw new ArgumentException(StringResources.StoreCtxNT4IdentityClaimWrongForm);
+                            throw new ArgumentException(SR.StoreCtxNT4IdentityClaimWrongForm);
                         else
                             return false;
 
@@ -565,7 +562,7 @@ namespace System.DirectoryServices.AccountManagement
 
                 default:
                     if (throwOnFail)
-                        throw new ArgumentException(StringResources.StoreCtxUnsupportedIdentityClaimForQuery);
+                        throw new ArgumentException(SR.StoreCtxUnsupportedIdentityClaimForQuery);
                     else
                         return false;
             }
@@ -579,7 +576,7 @@ namespace System.DirectoryServices.AccountManagement
             IdentityClaim ic = (IdentityClaim)filter.Value;
 
             if (ic.UrnScheme == null)
-                throw new ArgumentException(StringResources.StoreCtxIdentityClaimMustHaveScheme);
+                throw new ArgumentException(SR.StoreCtxIdentityClaimMustHaveScheme);
 
             string urnValue = ic.UrnValue;
             if (urnValue == null)
@@ -610,7 +607,7 @@ namespace System.DirectoryServices.AccountManagement
                     if (null == sidB)
                     {
                         if (throwOnFail)
-                            throw new ArgumentException(StringResources.StoreCtxSecurityIdentityClaimBadFormat);
+                            throw new ArgumentException(SR.StoreCtxSecurityIdentityClaimBadFormat);
                         else
                             return false;
                     }
@@ -618,7 +615,7 @@ namespace System.DirectoryServices.AccountManagement
                 else
                 {
                     if (throwOnFail)
-                        throw new ArgumentException(StringResources.StoreCtxSecurityIdentityClaimBadFormat);
+                        throw new ArgumentException(SR.StoreCtxSecurityIdentityClaimBadFormat);
                     else
                         return false;
                 }
@@ -674,7 +671,7 @@ namespace System.DirectoryServices.AccountManagement
         }
         protected static string UserAccountControlConverter(FilterBase filter, string suggestedAdProperty)
         {
-            Debug.Assert(String.Compare(suggestedAdProperty, "userAccountControl", StringComparison.OrdinalIgnoreCase) == 0);
+            Debug.Assert(string.Equals(suggestedAdProperty, "userAccountControl", StringComparison.OrdinalIgnoreCase));
 
             StringBuilder sb = new StringBuilder();
 
@@ -737,9 +734,9 @@ namespace System.DirectoryServices.AccountManagement
                     // This bit doesn't work correctly in AD (AD models the "user can't change password"
                     // setting as special ACEs in the ntSecurityDescriptor).
                     throw new InvalidOperationException(
-                                            String.Format(
+                                            string.Format(
                                                     CultureInfo.CurrentCulture,
-                                                    StringResources.StoreCtxUnsupportedPropertyForQuery,
+                                                    SR.StoreCtxUnsupportedPropertyForQuery,
                                                     PropertyNamesExternal.GetExternalForm(filter.PropertyName)));
 
                 case AllowReversiblePasswordEncryptionFilter.PropertyNameStatic:
@@ -784,7 +781,7 @@ namespace System.DirectoryServices.AccountManagement
 
         protected static string ExpirationDateConverter(FilterBase filter, string suggestedAdProperty)
         {
-            Debug.Assert(String.Compare(suggestedAdProperty, "accountExpires", StringComparison.OrdinalIgnoreCase) == 0);
+            Debug.Assert(string.Equals(suggestedAdProperty, "accountExpires", StringComparison.OrdinalIgnoreCase));
             Debug.Assert(filter is ExpirationDateFilter);
 
             Nullable<DateTime> date = (Nullable<DateTime>)filter.Value;
@@ -807,7 +804,7 @@ namespace System.DirectoryServices.AccountManagement
 
         protected static string GuidConverter(FilterBase filter, string suggestedAdProperty)
         {
-            Debug.Assert(String.Compare(suggestedAdProperty, "objectGuid", StringComparison.OrdinalIgnoreCase) == 0);
+            Debug.Assert(string.Equals(suggestedAdProperty, "objectGuid", StringComparison.OrdinalIgnoreCase));
             Debug.Assert(filter is GuidFilter);
 
             Nullable<Guid> guid = (Nullable<Guid>)filter.Value;
@@ -826,7 +823,7 @@ namespace System.DirectoryServices.AccountManagement
                 string ldapHexGuid = ADUtils.HexStringToLdapHexString(guid.ToString());
 
                 if (ldapHexGuid == null)
-                    throw new InvalidOperationException(StringResources.StoreCtxGuidIdentityClaimBadFormat);
+                    throw new InvalidOperationException(SR.StoreCtxGuidIdentityClaimBadFormat);
 
                 sb.Append(ldapHexGuid);
 
@@ -887,7 +884,7 @@ namespace System.DirectoryServices.AccountManagement
 
         protected static string GroupTypeConverter(FilterBase filter, string suggestedAdProperty)
         {
-            Debug.Assert(String.Compare(suggestedAdProperty, "groupType", StringComparison.OrdinalIgnoreCase) == 0);
+            Debug.Assert(string.Equals(suggestedAdProperty, "groupType", StringComparison.OrdinalIgnoreCase));
             Debug.Assert(filter is GroupIsSecurityGroupFilter || filter is GroupScopeFilter);
 
             // 1.2.840.113556.1.4.803 is like a bit-wise AND operator
@@ -1036,12 +1033,12 @@ namespace System.DirectoryServices.AccountManagement
             return (ldapFilter.ToString());
         }
 
-        public static string ExtensionTypeConverter(string attributeName, Type type, Object value, MatchType mt)
+        public static string ExtensionTypeConverter(string attributeName, Type type, object value, MatchType mt)
         {
             StringBuilder ldapFilter = new StringBuilder("(");
             string ldapValue;
 
-            if (typeof(Boolean) == type)
+            if (typeof(bool) == type)
             {
                 ldapValue = ((bool)value ? "TRUE" : "FALSE");
             }

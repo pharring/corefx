@@ -70,7 +70,7 @@ namespace System.Security.Cryptography.Xml
             BeginCanonicalization,
 
             /// <summary>
-            ///     Verificaiton of the signature format itself is beginning
+            ///     Verification of the signature format itself is beginning
             /// </summary>
             BeginCheckSignatureFormat,
 
@@ -544,10 +544,10 @@ namespace System.Security.Cryptography.Xml
         }
 
         /// <summary>
-        ///     Log namespaces which are being propigated into the singature
+        ///     Log namespaces which are being propagated into the signature
         /// </summary>
         /// <param name="signedXml">SignedXml doing the signing or verification</param>
-        /// <param name="namespaces">namespaces being propigated</param>
+        /// <param name="namespaces">namespaces being propagated</param>
         internal static void LogNamespacePropagation(SignedXml signedXml, XmlNodeList namespaces)
         {
             Debug.Assert(signedXml != null, "signedXml != null");
@@ -698,6 +698,8 @@ namespace System.Security.Cryptography.Xml
 
             if (VerboseLoggingEnabled)
             {
+                HashAlgorithm hashAlgorithm = CryptoHelpers.CreateFromName<HashAlgorithm>(reference.DigestMethod);
+                string hashAlgorithmName = hashAlgorithm == null ? "null" : hashAlgorithm.GetType().Name;
                 string logMessage = string.Format(CultureInfo.InvariantCulture,
                                                   SR.Log_SigningReference,
                                                   GetObjectId(reference),
@@ -705,7 +707,7 @@ namespace System.Security.Cryptography.Xml
                                                   reference.Id,
                                                   reference.Type,
                                                   reference.DigestMethod,
-                                                  CryptoHelpers.CreateFromName(reference.DigestMethod).GetType().Name);
+                                                  hashAlgorithmName);
 
                 WriteLine(signedXml,
                           TraceEventType.Verbose,
@@ -831,11 +833,13 @@ namespace System.Security.Cryptography.Xml
 
             if (VerboseLoggingEnabled)
             {
+                HashAlgorithm hashAlgorithm = CryptoHelpers.CreateFromName<HashAlgorithm>(reference.DigestMethod);
+                string hashAlgorithmName = hashAlgorithm == null ? "null" : hashAlgorithm.GetType().Name;
                 string logMessage = string.Format(CultureInfo.InvariantCulture,
                                                   SR.Log_ReferenceHash,
                                                   GetObjectId(reference),
                                                   reference.DigestMethod,
-                                                  CryptoHelpers.CreateFromName(reference.DigestMethod).GetType().Name,
+                                                  hashAlgorithmName,
                                                   FormatBytes(actualHash),
                                                   FormatBytes(expectedHash));
 
@@ -903,7 +907,7 @@ namespace System.Security.Cryptography.Xml
         ///     keyed hash algorithm
         /// </summary>
         /// <param name="signedXml">SignedXml object doing the verification</param>
-        /// <param name="mac">hash algoirthm doing the verification</param>
+        /// <param name="mac">hash algorithm doing the verification</param>
         /// <param name="actualHashValue">hash value of the signed info</param>
         /// <param name="signatureValue">raw signature value</param>
         internal static void LogVerifySignedInfo(SignedXml signedXml,
@@ -1030,7 +1034,7 @@ namespace System.Security.Cryptography.Xml
         }
 
         /// <summary>
-        /// Write informaiton when user hits the Signed XML recursion depth limit issue.
+        /// Write information when user hits the Signed XML recursion depth limit issue.
         /// This is helpful in debugging this kind of issues.
         /// </summary>
         /// <param name="signedXml">SignedXml object verifying the signature</param>
@@ -1043,11 +1047,13 @@ namespace System.Security.Cryptography.Xml
 
             if (InformationLoggingEnabled)
             {
+                HashAlgorithm hashAlgorithm = CryptoHelpers.CreateFromName<HashAlgorithm>(reference.DigestMethod);
+                string hashAlgorithmName = hashAlgorithm == null ? "null" : hashAlgorithm.GetType().Name;
                 string logMessage = string.Format(CultureInfo.InvariantCulture,
                                                     SR.Log_SignedXmlRecursionLimit,
                                                     GetObjectId(reference),
                                                     reference.DigestMethod,
-                                                    CryptoHelpers.CreateFromName(reference.DigestMethod).GetType().Name);
+                                                    hashAlgorithmName);
 
                 WriteLine(signedXml,
                             TraceEventType.Information,

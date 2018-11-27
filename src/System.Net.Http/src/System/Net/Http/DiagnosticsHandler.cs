@@ -38,6 +38,11 @@ namespace System.Net.Http
             //from DiagnosticListener right after the check. So some requests happening right after subscription starts
             //might not be instrumented. Similarly, when consumer unsubscribes, extra requests might be instumented
 
+            if (request == null)
+            {
+                throw new ArgumentNullException(nameof(request), SR.net_http_handler_norequest);
+            }
+
             Activity activity = null;
             Guid loggingRequestId = Guid.Empty;
 
@@ -55,8 +60,8 @@ namespace System.Net.Http
                     activity.Start();
                 }
             }
-            //if Activity events are disabled, try to write System.Net.Http.Request event (deprecated)
-            else if (s_diagnosticListener.IsEnabled(DiagnosticsHandlerLoggingStrings.RequestWriteNameDeprecated))
+            //try to write System.Net.Http.Request event (deprecated)
+            if (s_diagnosticListener.IsEnabled(DiagnosticsHandlerLoggingStrings.RequestWriteNameDeprecated))
             {
                 long timestamp = Stopwatch.GetTimestamp();
                 loggingRequestId = Guid.NewGuid();
@@ -92,10 +97,12 @@ namespace System.Net.Http
                 }
             }
 
-            Task<HttpResponseMessage> responseTask = base.SendAsync(request, cancellationToken);
+            Task<HttpResponseMessage> responseTask = null;
             try
             {
-                await responseTask.ConfigureAwait(false);
+                responseTask = base.SendAsync(request, cancellationToken);
+
+                return await responseTask.ConfigureAwait(false);
             }
             catch (TaskCanceledException)
             {
@@ -120,30 +127,29 @@ namespace System.Net.Http
                 {
                     s_diagnosticListener.StopActivity(activity, new
                     {
-                        Response = responseTask.Status == TaskStatus.RanToCompletion ? responseTask.Result : null,
+                        Response = responseTask?.Status == TaskStatus.RanToCompletion ? responseTask.Result : null,
                         //If request is failed or cancelled, there is no reponse, therefore no information about request;
                         //pass the request in the payload, so consumers can have it in Stop for failed/canceled requests
                         //and not retain all requests in Start 
                         Request = request,
-                        RequestTaskStatus = responseTask.Status
+                        RequestTaskStatus = responseTask?.Status ?? TaskStatus.Faulted
                     });
                 }
-                //if Activity events are disabled, try to write System.Net.Http.Response event (deprecated)
-                else if (s_diagnosticListener.IsEnabled(DiagnosticsHandlerLoggingStrings.ResponseWriteNameDeprecated))
+                // Try to write System.Net.Http.Response event (deprecated)
+                if (s_diagnosticListener.IsEnabled(DiagnosticsHandlerLoggingStrings.ResponseWriteNameDeprecated))
                 {
                     long timestamp = Stopwatch.GetTimestamp();
                     s_diagnosticListener.Write(DiagnosticsHandlerLoggingStrings.ResponseWriteNameDeprecated,
                         new
                         {
-                            Response = responseTask.Status == TaskStatus.RanToCompletion ? responseTask.Result : null,
+                            Response = responseTask?.Status == TaskStatus.RanToCompletion ? responseTask.Result : null,
                             LoggingRequestId = loggingRequestId,
                             TimeStamp = timestamp,
-                            RequestTaskStatus = responseTask.Status
+                            RequestTaskStatus = responseTask?.Status ?? TaskStatus.Faulted
                         }
                     );
                 }
             }
-            return responseTask.Result;
         }
 
         #region private

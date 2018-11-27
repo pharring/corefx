@@ -15,9 +15,9 @@ namespace Internal.Cryptography.Pal
         private sealed class AppleCertificateExporter : IExportPal
         {
             private X509Certificate2Collection _certs;
-            private ICertificatePal _singleCertPal;
+            private ICertificatePalCore _singleCertPal;
 
-            public AppleCertificateExporter(ICertificatePal cert)
+            public AppleCertificateExporter(ICertificatePalCore cert)
             {
                 _singleCertPal = cert;
             }
@@ -90,7 +90,9 @@ namespace Internal.Cryptography.Pal
                     }
                 }
 
-                return Interop.AppleCrypto.X509ExportPfx(certHandles, password);
+                byte[] exported = Interop.AppleCrypto.X509ExportPfx(certHandles, password);
+                GC.KeepAlive(_certs); // ensure certs' safe handles aren't finalized while raw handles are in use
+                return exported;
             }
 
             private byte[] ExportPkcs7()

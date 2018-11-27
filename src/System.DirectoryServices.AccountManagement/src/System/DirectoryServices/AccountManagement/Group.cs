@@ -9,9 +9,6 @@ using System.Security.Permissions;
 
 namespace System.DirectoryServices.AccountManagement
 {
-#pragma warning disable 618    // Have not migrated to v4 transparency yet
-    [System.Security.SecurityCritical(System.Security.SecurityCriticalScope.Everything)]
-#pragma warning restore 618
     [DirectoryRdnPrefix("CN")]
     public class GroupPrincipal : Principal
     {
@@ -21,7 +18,7 @@ namespace System.DirectoryServices.AccountManagement
         public GroupPrincipal(PrincipalContext context)
         {
             if (context == null)
-                throw new ArgumentException(StringResources.NullArguments);
+                throw new ArgumentException(SR.NullArguments);
 
             this.ContextRaw = context;
             this.unpersisted = true;
@@ -30,7 +27,7 @@ namespace System.DirectoryServices.AccountManagement
         public GroupPrincipal(PrincipalContext context, string samAccountName) : this(context)
         {
             if (samAccountName == null)
-                throw new ArgumentException(StringResources.NullArguments);
+                throw new ArgumentException(SR.NullArguments);
 
             if (Context.ContextType != ContextType.ApplicationDirectory)
                 this.SamAccountName = samAccountName;
@@ -81,7 +78,7 @@ namespace System.DirectoryServices.AccountManagement
 
                 // We don't want to let them set a null value.
                 if (!value.HasValue)
-                    throw new ArgumentNullException("value");
+                    throw new ArgumentNullException(nameof(value));
 
                 HandleSet<bool>(ref _isSecurityGroup, value.Value, ref _isSecurityGroupChanged, PropertyNames.GroupIsSecurityGroup);
             }
@@ -127,7 +124,7 @@ namespace System.DirectoryServices.AccountManagement
 
                 // We don't want to let them set a null value.
                 if (!value.HasValue)
-                    throw new ArgumentNullException("value");
+                    throw new ArgumentNullException(nameof(value));
 
                 HandleSet<GroupScope>(ref _groupScope, value.Value, ref _groupScopeChanged, PropertyNames.GroupGroupScope);
             }

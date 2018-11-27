@@ -6,7 +6,9 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.Security.Cryptography;
+using System.Security.Cryptography.Asn1;
 using System.Security.Cryptography.X509Certificates;
+using System.Security.Cryptography.X509Certificates.Asn1;
 using Microsoft.Win32.SafeHandles;
 
 namespace Internal.Cryptography.Pal
@@ -37,7 +39,6 @@ namespace Internal.Cryptography.Pal
         public static IChainPal BuildChain(
             X509Certificate2 leaf,
             HashSet<X509Certificate2> candidates,
-            HashSet<X509Certificate2> downloaded,
             HashSet<X509Certificate2> systemTrusted,
             OidCollection applicationPolicy,
             OidCollection certificatePolicy,
@@ -57,9 +58,11 @@ namespace Internal.Cryptography.Pal
             // (If you need to think of it as an X509Store, it's a volatile memory store)
             using (SafeX509StoreHandle store = Interop.Crypto.X509StoreCreate())
             using (SafeX509StoreCtxHandle storeCtx = Interop.Crypto.X509StoreCtxCreate())
+            using (SafeX509StackHandle extraCerts = Interop.Crypto.NewX509Stack())
             {
                 Interop.Crypto.CheckValidOpenSslHandle(store);
                 Interop.Crypto.CheckValidOpenSslHandle(storeCtx);
+                Interop.Crypto.CheckValidOpenSslHandle(extraCerts);
 
                 bool lookupCrl = revocationMode != X509RevocationMode.NoCheck;
 
@@ -67,9 +70,15 @@ namespace Internal.Cryptography.Pal
                 {
                     OpenSslX509CertificateReader pal = (OpenSslX509CertificateReader)cert.Pal;
 
-                    if (!Interop.Crypto.X509StoreAddCert(store, pal.SafeHandle))
+                    using (SafeX509Handle handle = Interop.Crypto.X509UpRef(pal.SafeHandle))
                     {
-                        throw Interop.Crypto.CreateOpenSslCryptographicException();
+                        if (!Interop.Crypto.PushX509StackField(extraCerts, handle))
+                        {
+                            throw Interop.Crypto.CreateOpenSslCryptographicException();
+                        }
+
+                        // Ownership was transferred to the cert stack.
+                        handle.SetHandleAsInvalid();
                     }
 
                     if (lookupCrl)
@@ -95,9 +104,19 @@ namespace Internal.Cryptography.Pal
                     }
                 }
 
+                foreach (X509Certificate2 trustedCert in systemTrusted)
+                {
+                    OpenSslX509CertificateReader pal = (OpenSslX509CertificateReader)trustedCert.Pal;
+
+                    if (!Interop.Crypto.X509StoreAddCert(store, pal.SafeHandle))
+                    {
+                        throw Interop.Crypto.CreateOpenSslCryptographicException();
+                    }
+                }
+
                 SafeX509Handle leafHandle = ((OpenSslX509CertificateReader)leaf.Pal).SafeHandle;
 
-                if (!Interop.Crypto.X509StoreCtxInit(storeCtx, store, leafHandle))
+                if (!Interop.Crypto.X509StoreCtxInit(storeCtx, store, leafHandle, extraCerts))
                 {
                     throw Interop.Crypto.CreateOpenSslCryptographicException();
                 }
@@ -144,22 +163,6 @@ namespace Internal.Cryptography.Pal
 
                         // Duplicate the certificate handle
                         X509Certificate2 elementCert = new X509Certificate2(elementCertPtr);
-
-                        // If the last cert is self signed then it's the root cert, do any extra checks.
-                        if (i == maybeRootDepth && IsSelfSigned(elementCert))
-                        {
-                            // If the root certificate was downloaded or the system
-                            // doesn't trust it, it's untrusted.
-                            if (downloaded.Contains(elementCert) ||
-                                !systemTrusted.Contains(elementCert))
-                            {
-                                AddElementStatus(
-                                    Interop.Crypto.X509VerifyStatusCode.X509_V_ERR_CERT_UNTRUSTED,
-                                    status,
-                                    overallStatus);
-                            }
-                        }
-
                         elements[i] = new X509ChainElement(elementCert, status.ToArray(), "");
                     }
                 }
@@ -301,6 +304,7 @@ namespace Internal.Cryptography.Pal
                 case Interop.Crypto.X509VerifyStatusCode.X509_V_ERR_CERT_REVOKED:
                     return X509ChainStatusFlags.Revoked;
 
+                case Interop.Crypto.X509VerifyStatusCode.X509_V_ERR_UNABLE_TO_DECODE_ISSUER_PUBLIC_KEY:
                 case Interop.Crypto.X509VerifyStatusCode.X509_V_ERR_CERT_SIGNATURE_FAILURE:
                     return X509ChainStatusFlags.NotSignatureValid;
 
@@ -378,16 +382,19 @@ namespace Internal.Cryptography.Pal
             using (var systemIntermediateStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.LocalMachine))
             using (var userRootStore = new X509Store(StoreName.Root, StoreLocation.CurrentUser))
             using (var userIntermediateStore = new X509Store(StoreName.CertificateAuthority, StoreLocation.CurrentUser))
+            using (var userMyStore = new X509Store(StoreName.My, StoreLocation.CurrentUser))
             {
                 systemRootStore.Open(OpenFlags.ReadOnly);
                 systemIntermediateStore.Open(OpenFlags.ReadOnly);
                 userRootStore.Open(OpenFlags.ReadOnly);
                 userIntermediateStore.Open(OpenFlags.ReadOnly);
+                userMyStore.Open(OpenFlags.ReadOnly);
 
                 X509Certificate2Collection systemRootCerts = systemRootStore.Certificates;
                 X509Certificate2Collection systemIntermediateCerts = systemIntermediateStore.Certificates;
                 X509Certificate2Collection userRootCerts = userRootStore.Certificates;
                 X509Certificate2Collection userIntermediateCerts = userIntermediateStore.Certificates;
+                X509Certificate2Collection userMyCerts = userMyStore.Certificates;
 
                 // fill the system trusted collection
                 foreach (X509Certificate2 userRootCert in userRootCerts)
@@ -414,6 +421,7 @@ namespace Internal.Cryptography.Pal
                 X509Certificate2Collection[] storesToCheck =
                 {
                     extraStore,
+                    userMyCerts,
                     userIntermediateCerts,
                     systemIntermediateCerts,
                     userRootCerts,
@@ -450,7 +458,7 @@ namespace Internal.Cryptography.Pal
                     candidates,
                     ReferenceEqualityComparer<X509Certificate2>.Instance);
 
-                // Certificates come from 5 sources:
+                // Certificates come from 6 sources:
                 //  1) extraStore.
                 //     These are cert objects that are provided by the user, we shouldn't dispose them.
                 //  2) the machine root store
@@ -461,8 +469,11 @@ namespace Internal.Cryptography.Pal
                 //     These certs were either path candidates, or not. If they were, don't dispose them. Otherwise do.
                 //  5) the user intermediate store
                 //     These certs were either path candidates, or not. If they were, don't dispose them. Otherwise do.
+                //  6) the user my store
+                //     These certs were either path candidates, or not. If they were, don't dispose them. Otherwise do.
                 DisposeUnreferenced(candidatesByReference, systemIntermediateCerts);
                 DisposeUnreferenced(candidatesByReference, userIntermediateCerts);
+                DisposeUnreferenced(candidatesByReference, userMyCerts);
             }
 
             return candidates;
@@ -586,36 +597,22 @@ namespace Internal.Cryptography.Pal
 
         internal static string FindHttpAiaRecord(byte[] authorityInformationAccess, string recordTypeOid)
         {
-            DerSequenceReader reader = new DerSequenceReader(authorityInformationAccess);
+            AsnReader reader = new AsnReader(authorityInformationAccess, AsnEncodingRules.DER);
+            AsnReader sequenceReader = reader.ReadSequence();
+            reader.ThrowIfNotEmpty();
 
-            while (reader.HasData)
+            while (sequenceReader.HasData)
             {
-                DerSequenceReader innerReader = reader.ReadSequence();
-
-                // If the sequence's first element is a sequence, unwrap it.
-                if (innerReader.PeekTag() == ConstructedSequenceTagId)
+                AccessDescriptionAsn.Decode(sequenceReader, out AccessDescriptionAsn description);
+                if (StringComparer.Ordinal.Equals(description.AccessMethod, recordTypeOid))
                 {
-                    innerReader = innerReader.ReadSequence();
-                }
-
-                Oid oid = innerReader.ReadOid();
-
-                if (StringComparer.Ordinal.Equals(oid.Value, recordTypeOid))
-                {
-                    string uri = innerReader.ReadIA5String();
-
-                    Uri parsedUri;
-                    if (!Uri.TryCreate(uri, UriKind.Absolute, out parsedUri))
+                    GeneralNameAsn name = description.AccessLocation;
+                    if (name.Uri != null &&
+                        Uri.TryCreate(name.Uri, UriKind.Absolute, out Uri uri) &&
+                        uri.Scheme == "http")
                     {
-                        continue;
+                        return name.Uri;
                     }
-
-                    if (!StringComparer.Ordinal.Equals(parsedUri.Scheme, "http"))
-                    {
-                        continue;
-                    }
-
-                    return uri;
                 }
             }
 
@@ -629,7 +626,7 @@ namespace Internal.Cryptography.Pal
 
             internal int VerifyCallback(int ok, IntPtr ctx)
             {
-                if (ok < 0)
+                if (ok != 0)
                 {
                     return ok;
                 }

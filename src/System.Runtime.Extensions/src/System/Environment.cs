@@ -2,12 +2,12 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
-using Internal.Runtime.Augments;
 using System.Collections;
-using System.IO;
+using System.Collections.Generic;
+using System.Diagnostics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
-using System.Text;
+using Internal.Runtime.Augments;
 
 namespace System
 {
@@ -31,13 +31,30 @@ namespace System
             //
             // While we could pass Hashtable back from CoreCLR the type is also defined here. We only
             // want to surface the local Hashtable.
-            return new Hashtable(EnvironmentAugments.GetEnvironmentVariables());
+            return EnvironmentAugments.EnumerateEnvironmentVariables().ToHashtable();
         }
 
         public static IDictionary GetEnvironmentVariables(EnvironmentVariableTarget target)
         {
             // See comments in GetEnvironmentVariables()
-            return new Hashtable(EnvironmentAugments.GetEnvironmentVariables(target));
+            return EnvironmentAugments.EnumerateEnvironmentVariables(target).ToHashtable();
+        }
+
+        private static Hashtable ToHashtable(this IEnumerable<KeyValuePair<string, string>> pairs)
+        {
+            Hashtable hashTable = new Hashtable();
+            foreach (KeyValuePair<string, string> pair in pairs)
+            {
+                try 
+                {
+                    hashTable.Add(pair.Key, pair.Value);                 
+                }
+                catch (ArgumentException)
+                {
+                    // Throw and catch intentionally to provide non-fatal notification about corrupted environment block
+                }
+            }
+            return hashTable;
         }
 
         public static void SetEnvironmentVariable(string variable, string value)
@@ -54,35 +71,7 @@ namespace System
         {
             get
             {
-                StringBuilder sb = StringBuilderCache.Acquire();
-
-                foreach (string arg in GetCommandLineArgs())
-                {
-                    bool containsQuotes = false, containsWhitespace = false;
-                    foreach (char c in arg)
-                    {
-                        if (char.IsWhiteSpace(c))
-                        {
-                            containsWhitespace = true;
-                        }
-                        else if (c == '"')
-                        {
-                            containsQuotes = true;
-                        }
-                    }
-
-                    string quote = containsWhitespace ? "\"" : "";
-                    string formattedArg = containsQuotes && containsWhitespace ? arg.Replace("\"", "\\\"") : arg;
-
-                    sb.Append(quote).Append(formattedArg).Append(quote).Append(' ');
-                }
-
-                if (sb.Length > 0)
-                {
-                    sb.Length--;
-                }
-
-                return StringBuilderCache.GetStringAndRelease(sb);
+                return PasteArguments.Paste(GetCommandLineArgs(), pasteFirstArgumentUsingArgV0Rules: true);
             }
         }
 
@@ -155,6 +144,8 @@ namespace System
 
         public static OperatingSystem OSVersion => s_osVersion.Value;
 
+        public static int ProcessorCount => EnvironmentAugments.ProcessorCount;
+
         public static string StackTrace
         {
             [MethodImpl(MethodImplOptions.NoInlining)] // Prevent inlining from affecting where the stacktrace starts
@@ -192,6 +183,13 @@ namespace System
                     {
                         object result = processType.GetTypeInfo().GetDeclaredProperty("WorkingSet64")?.GetMethod?.Invoke(currentProcess, null);
                         if (result is long) return (long)result;
+                    }
+                    catch (TargetInvocationException tie)
+                    {
+                        if(tie.InnerException != null)
+                            throw tie.InnerException;
+
+                        throw tie;
                     }
                     finally { currentProcess.Dispose(); }
                 }

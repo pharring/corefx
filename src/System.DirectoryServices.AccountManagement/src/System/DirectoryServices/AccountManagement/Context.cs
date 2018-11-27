@@ -17,8 +17,6 @@ using System.Threading;
 using System.Collections;
 using System.Security.Permissions;
 
-[assembly: System.Security.SecurityCritical]
-
 namespace System.DirectoryServices.AccountManagement
 {
     internal struct ServerProperties
@@ -87,7 +85,6 @@ namespace System.DirectoryServices.AccountManagement
             _serverProperties = serverProperties;
         }
 
-        [System.Security.SecurityCritical]
         private bool BindSam(string target, string userName, string password)
         {
             StringBuilder adsPath = new StringBuilder();
@@ -227,7 +224,6 @@ namespace System.DirectoryServices.AccountManagement
             return true;
         }
 
-        [System.Security.SecuritySafeCritical]
         private void lockedLdapBind(LdapConnection current, NetworkCredential creds, ContextOptions contextOptions)
         {
             current.AuthType = ((ContextOptions.SimpleBind & contextOptions) > 0 ? AuthType.Basic : AuthType.Negotiate);
@@ -243,7 +239,6 @@ namespace System.DirectoryServices.AccountManagement
             }
         }
 
-        [System.Security.SecurityCritical]
         public bool Validate(string userName, string password)
         {
             NetworkCredential networkCredential = new NetworkCredential(userName, password);
@@ -313,7 +308,6 @@ namespace System.DirectoryServices.AccountManagement
             }
         }
 
-        [System.Security.SecurityCritical]
         public bool Validate(string userName, string password, ContextOptions connectionMethod)
         {
             // empty username and password on the local box
@@ -347,11 +341,6 @@ namespace System.DirectoryServices.AccountManagement
         }
     }
     // ********************************************
-    [System.Security.Permissions.SecurityPermission(System.Security.Permissions.SecurityAction.Assert,
-                                                Flags = System.Security.Permissions.SecurityPermissionFlag.UnmanagedCode)]
-#pragma warning disable 618    // Have not migrated to v4 transparency yet
-    [System.Security.SecurityCritical(System.Security.SecurityCriticalScope.Everything)]
-#pragma warning restore 618
     public class PrincipalContext : IDisposable
     {
         //
@@ -389,21 +378,21 @@ namespace System.DirectoryServices.AccountManagement
 
             if ((userName == null && password != null) ||
                 (userName != null && password == null))
-                throw new ArgumentException(StringResources.ContextBadUserPwdCombo);
+                throw new ArgumentException(SR.ContextBadUserPwdCombo);
 
             if ((options & ~(ContextOptions.Signing | ContextOptions.Negotiate | ContextOptions.Sealing | ContextOptions.SecureSocketLayer | ContextOptions.SimpleBind | ContextOptions.ServerBind)) != 0)
-                throw new InvalidEnumArgumentException("options", (int)options, typeof(ContextOptions));
+                throw new InvalidEnumArgumentException(nameof(options), (int)options, typeof(ContextOptions));
 
             if (contextType == ContextType.Machine && ((options & ~ContextOptions.Negotiate) != 0))
             {
-                throw new ArgumentException(StringResources.InvalidContextOptionsForMachine);
+                throw new ArgumentException(SR.InvalidContextOptionsForMachine);
             }
 
             if ((contextType == ContextType.Domain || contextType == ContextType.ApplicationDirectory) &&
                 (((options & (ContextOptions.Negotiate | ContextOptions.SimpleBind)) == 0) ||
                 (((options & (ContextOptions.Negotiate | ContextOptions.SimpleBind)) == ((ContextOptions.Negotiate | ContextOptions.SimpleBind))))))
             {
-                throw new ArgumentException(StringResources.InvalidContextOptionsForAD);
+                throw new ArgumentException(SR.InvalidContextOptionsForAD);
             }
 
             if ((contextType != ContextType.Machine) &&
@@ -414,14 +403,14 @@ namespace System.DirectoryServices.AccountManagement
 #endif
                 )
             {
-                throw new InvalidEnumArgumentException("contextType", (int)contextType, typeof(ContextType));
+                throw new InvalidEnumArgumentException(nameof(contextType), (int)contextType, typeof(ContextType));
             }
 
             if ((contextType == ContextType.Machine) && (container != null))
-                throw new ArgumentException(StringResources.ContextNoContainerForMachineCtx);
+                throw new ArgumentException(SR.ContextNoContainerForMachineCtx);
 
-            if ((contextType == ContextType.ApplicationDirectory) && ((String.IsNullOrEmpty(container)) || (String.IsNullOrEmpty(name))))
-                throw new ArgumentException(StringResources.ContextNoContainerForApplicationDirectoryCtx);
+            if ((contextType == ContextType.ApplicationDirectory) && ((string.IsNullOrEmpty(container)) || (string.IsNullOrEmpty(name))))
+                throw new ArgumentException(SR.ContextNoContainerForApplicationDirectoryCtx);
 
             _contextType = contextType;
             _name = name;
@@ -519,7 +508,7 @@ namespace System.DirectoryServices.AccountManagement
 
             if ((userName == null && password != null) ||
                 (userName != null && password == null))
-                throw new ArgumentException(StringResources.ContextBadUserPwdCombo);
+                throw new ArgumentException(SR.ContextBadUserPwdCombo);
 
 #if TESTHOOK
                 if ( contextType == ContextType.Test )
@@ -542,10 +531,10 @@ namespace System.DirectoryServices.AccountManagement
 
             if ((userName == null && password != null) ||
                 (userName != null && password == null))
-                throw new ArgumentException(StringResources.ContextBadUserPwdCombo);
+                throw new ArgumentException(SR.ContextBadUserPwdCombo);
 
             if (options != ContextOptions.Negotiate && _contextType == ContextType.Machine)
-                throw new ArgumentException(StringResources.ContextOptionsNotValidForMachineStore);
+                throw new ArgumentException(SR.ContextOptionsNotValidForMachineStore);
 
 #if TESTHOOK
                 if ( contextType == ContextType.Test )
@@ -701,7 +690,7 @@ namespace System.DirectoryServices.AccountManagement
 
                 if (_serverProperties.contextType != _contextType)
                 {
-                    throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, StringResources.PassedContextTypeDoesNotMatchDetectedType, _serverProperties.contextType.ToString()));
+                    throw new ArgumentException(string.Format(CultureInfo.CurrentCulture, SR.PassedContextTypeDoesNotMatchDetectedType, _serverProperties.contextType.ToString()));
                 }
             }
         }
@@ -886,7 +875,7 @@ namespace System.DirectoryServices.AccountManagement
                 {
                     // Something's wrong with the domain, it's not exposing the proper
                     // well-known object fields.
-                    throw new PrincipalOperationException(StringResources.ContextNoWellKnownObjects);
+                    throw new PrincipalOperationException(SR.ContextNoWellKnownObjects);
                 }
 
                 //
@@ -1083,7 +1072,6 @@ namespace System.DirectoryServices.AccountManagement
 
         internal StoreCtx QueryCtx
         {
-            [System.Security.SecuritySafeCritical]
             get
             {
                 Initialize();
@@ -1133,7 +1121,7 @@ namespace System.DirectoryServices.AccountManagement
                 }
                 catch (LdapException ex)
                 {
-                    throw new PrincipalServerDownException(StringResources.ServerDown, ex);
+                    throw new PrincipalServerDownException(SR.ServerDown, ex);
                 }
 
                 // Fill in the struct with the casted properties from the serach results.
@@ -1244,7 +1232,6 @@ namespace System.DirectoryServices.AccountManagement
             }
             else
             {
-                Debug.Assert(storeType == ContextType.Domain || storeType == ContextType.ApplicationDirectory);
                 return DefaultContextOptions.ADDefaultContextOption;
             }
         }

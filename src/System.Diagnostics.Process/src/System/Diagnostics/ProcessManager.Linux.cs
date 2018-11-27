@@ -5,6 +5,7 @@
 using System.Collections.Generic;
 using System.Globalization;
 using System.IO;
+using System.Linq;
 using System.Text;
 
 namespace System.Diagnostics
@@ -14,7 +15,7 @@ namespace System.Diagnostics
         /// <summary>Gets the IDs of all processes on the current machine.</summary>
         public static int[] GetProcessIds()
         {
-            return EnumerableHelpers.ToArray(EnumerateProcessIds());
+            return EnumerateProcessIds().ToArray();
         }
 
         /// <summary>Gets process infos for each process on the specified machine.</summary>
@@ -77,6 +78,22 @@ namespace System.Diagnostics
                         ModuleMemorySize = sizeOfImage,
                         EntryPointAddress = IntPtr.Zero // unknown
                     });
+                }
+            }
+
+            // Move the main executable module to be the first in the list if it's not already
+            string exePath = Process.GetExePath(processId);
+            for (int i = 0; i < modules.Count; i++)
+            {
+                ProcessModule module = modules[i];
+                if (module.FileName == exePath)
+                {
+                    if (i > 0)
+                    {
+                        modules.RemoveAt(i);
+                        modules.Insert(0, module);
+                    }
+                    break;
                 }
             }
 
@@ -191,6 +208,8 @@ namespace System.Diagnostics
         /// <returns></returns>
         private static ThreadState ProcFsStateToThreadState(char c)
         {
+            // Information on these in fs/proc/array.c
+            // `man proc` does not document them all
             switch (c)
             {
                 case 'R': // Running
@@ -211,6 +230,9 @@ namespace System.Diagnostics
                 case 'W': // Paging or waking
                 case 'K': // Wakekill
                     return ThreadState.Transition;
+
+                case 'I': // Idle
+                    return ThreadState.Ready;
 
                 default:
                     Debug.Fail($"Unexpected status character: {c}");

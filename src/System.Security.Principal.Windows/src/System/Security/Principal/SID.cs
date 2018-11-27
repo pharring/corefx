@@ -6,7 +6,6 @@ using Microsoft.Win32.SafeHandles;
 using System;
 using System.ComponentModel;
 using System.Diagnostics;
-using System.Diagnostics.Contracts;
 using System.Globalization;
 using System.Runtime.InteropServices;
 using System.Text;
@@ -318,8 +317,6 @@ namespace System.Security.Principal
                 throw new ArgumentNullException(nameof(subAuthorities));
             }
 
-            Contract.EndContractBlock();
-
             //
             // Check the number of subauthorities passed in 
             //
@@ -430,7 +427,6 @@ nameof(offset),
 nameof(binaryForm),
                     SR.ArgumentOutOfRange_ArrayTooSmall);
             }
-            Contract.EndContractBlock();
 
             IdentifierAuthority Authority;
             int[] SubAuthorities;
@@ -527,7 +523,6 @@ nameof(binaryForm));
             {
                 throw new ArgumentNullException(nameof(sddlForm));
             }
-            Contract.EndContractBlock();
 
             //
             // Call into the underlying O/S conversion routine
@@ -595,7 +590,6 @@ nameof(binaryForm));
             {
                 throw new ArgumentException(SR.IdentityReference_CannotCreateLogonIdsSid, nameof(sidType));
             }
-            Contract.EndContractBlock();
 
             byte[] resultSid;
             int Error;
@@ -805,11 +799,11 @@ nameof(binaryForm));
                 // otherwise you would see this: "S-1-NTAuthority-32-544"
                 //
 
-                result.AppendFormat("S-1-{0}", (long)_identifierAuthority);
+                result.Append("S-1-").Append((long)_identifierAuthority);
 
                 for (int i = 0; i < SubAuthorityCount; i++)
                 {
-                    result.AppendFormat("-{0}", (uint)(_subAuthorities[i]));
+                    result.Append('-').Append((uint)(_subAuthorities[i]));
                 }
 
                 _sddlForm = result.ToString();
@@ -895,7 +889,6 @@ nameof(binaryForm));
             {
                 throw new ArgumentNullException(nameof(targetType));
             }
-            Contract.EndContractBlock();
 
             if (targetType == typeof(SecurityIdentifier))
             {
@@ -955,7 +948,6 @@ nameof(binaryForm));
             {
                 throw new ArgumentNullException(nameof(sid));
             }
-            Contract.EndContractBlock();
 
             if (this.IdentifierAuthority < sid.IdentifierAuthority)
             {
@@ -1040,13 +1032,12 @@ nameof(binaryForm));
             {
                 throw new ArgumentException(SR.Arg_EmptyCollection, nameof(sourceSids));
             }
-            Contract.EndContractBlock();
 
             IntPtr[] SidArrayPtr = new IntPtr[sourceSids.Count];
             GCHandle[] HandleArray = new GCHandle[sourceSids.Count];
-            SafeLsaPolicyHandle LsaHandle = SafeLsaPolicyHandle.InvalidHandle;
-            SafeLsaMemoryHandle ReferencedDomainsPtr = SafeLsaMemoryHandle.InvalidHandle;
-            SafeLsaMemoryHandle NamesPtr = SafeLsaMemoryHandle.InvalidHandle;
+            SafeLsaPolicyHandle LsaHandle = null;
+            SafeLsaMemoryHandle ReferencedDomainsPtr = null;
+            SafeLsaMemoryHandle NamesPtr = null;
 
             try
             {
@@ -1081,7 +1072,7 @@ nameof(binaryForm));
 
                 someFailed = false;
                 uint ReturnCode;
-                ReturnCode = Interop.Advapi32.LsaLookupSids(LsaHandle, sourceSids.Count, SidArrayPtr, ref ReferencedDomainsPtr, ref NamesPtr);
+                ReturnCode = Interop.Advapi32.LsaLookupSids(LsaHandle, sourceSids.Count, SidArrayPtr, out ReferencedDomainsPtr, out NamesPtr);
 
                 //
                 // Make a decision regarding whether it makes sense to proceed
@@ -1104,10 +1095,10 @@ nameof(binaryForm));
                 }
                 else if (ReturnCode != 0)
                 {
-                    int win32ErrorCode = Interop.NtDll.RtlNtStatusToDosError(unchecked((int)ReturnCode));
+                    uint win32ErrorCode = Interop.Advapi32.LsaNtStatusToWinError(ReturnCode);
 
                     Debug.Assert(false, string.Format(CultureInfo.InvariantCulture, "Interop.LsaLookupSids returned {0}", win32ErrorCode));
-                    throw new Win32Exception(win32ErrorCode);
+                    throw new Win32Exception(unchecked((int)win32ErrorCode));
                 }
 
 
@@ -1181,9 +1172,9 @@ nameof(binaryForm));
                     }
                 }
 
-                LsaHandle.Dispose();
-                ReferencedDomainsPtr.Dispose();
-                NamesPtr.Dispose();
+                LsaHandle?.Dispose();
+                ReferencedDomainsPtr?.Dispose();
+                NamesPtr?.Dispose();
             }
         }
 
@@ -1221,7 +1212,6 @@ nameof(binaryForm));
             {
                 throw new ArgumentNullException(nameof(sourceSids));
             }
-            Contract.EndContractBlock();
 
             if (targetType == typeof(NTAccount))
             {

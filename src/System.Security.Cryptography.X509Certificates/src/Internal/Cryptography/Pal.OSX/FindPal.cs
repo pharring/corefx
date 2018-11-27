@@ -2,6 +2,7 @@
 // The .NET Foundation licenses this file to you under the MIT license.
 // See the LICENSE file in the project root for more information.
 
+using System;
 using System.Security.Cryptography;
 using System.Security.Cryptography.X509Certificates;
 
@@ -21,34 +22,6 @@ namespace Internal.Cryptography.Pal
             {
             }
 
-            protected override string DerStringToManagedString(byte[] anyString)
-            {
-                DerSequenceReader reader = DerSequenceReader.CreateForPayload(anyString);
-
-                var tag = (DerSequenceReader.DerTag)reader.PeekTag();
-                string value = null;
-
-                switch (tag)
-                {
-                    case DerSequenceReader.DerTag.BMPString:
-                        value = reader.ReadBMPString();
-                        break;
-                    case DerSequenceReader.DerTag.IA5String:
-                        value = reader.ReadIA5String();
-                        break;
-                    case DerSequenceReader.DerTag.PrintableString:
-                        value = reader.ReadPrintableString();
-                        break;
-                    case DerSequenceReader.DerTag.UTF8String:
-                        value = reader.ReadUtf8String();
-                        break;
-
-                    // Ignore anything we don't know how to read.
-                }
-
-                return value;
-            }
-
             protected override byte[] GetSubjectPublicKeyInfo(X509Certificate2 cert)
             {
                 AppleCertificatePal pal = (AppleCertificatePal)cert.Pal;
@@ -57,7 +30,9 @@ namespace Internal.Cryptography.Pal
 
             protected override X509Certificate2 CloneCertificate(X509Certificate2 cert)
             {
-                return new X509Certificate2(cert.Handle);
+                var clone = new X509Certificate2(cert.Handle);
+                GC.KeepAlive(cert); // ensure cert's safe handle isn't finalized while raw handle is in use
+                return clone;
             }
         }
     }

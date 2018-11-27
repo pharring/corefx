@@ -6,6 +6,7 @@ Imports System
 Imports System.Diagnostics
 Imports System.Linq
 Imports System.Linq.Expressions
+Imports System.Text
 Imports System.Reflection
 
 Namespace Global.Microsoft.VisualBasic.CompilerServices
@@ -52,37 +53,22 @@ Namespace Global.Microsoft.VisualBasic.CompilerServices
             End If
             Return aryDest
         End Function
+
+        Friend Shared Function GetFileIOEncoding() As Encoding
+            Return System.Text.Encoding.Default
+        End Function
+
+        Friend Shared Function GetLocaleCodePage() As Integer
+            Return System.Threading.Thread.CurrentThread.CurrentCulture.TextInfo.ANSICodePage
+        End Function
+
     End Class
 
     Friend Module ReflectionExtensions
 
         <System.Runtime.CompilerServices.ExtensionAttribute()>
-        Public Function MemberType(ByVal memberInfo As MemberInfo) As MemberTypes
-            If TypeOf memberInfo Is ConstructorInfo Then
-                Return MemberTypes.Constructor
-            ElseIf TypeOf memberInfo Is MethodInfo Then
-                Return MemberTypes.Method
-            ElseIf TypeOf memberInfo Is PropertyInfo Then
-                Return MemberTypes.Property
-            ElseIf TypeOf memberInfo Is FieldInfo Then
-                Return MemberTypes.Field
-            ElseIf TypeOf memberInfo Is EventInfo Then
-                Return MemberTypes.Event
-            ElseIf TypeOf memberInfo Is System.Reflection.TypeInfo Then
-                Return MemberTypes.TypeInfo
-            Else
-                Throw New System.ArgumentException
-            End If
-        End Function
-
-        <System.Runtime.CompilerServices.ExtensionAttribute()>
         Public Function GetTypeCode(type As Type) As TypeCode
             Return Type.GetTypeCode(type)
-        End Function
-
-        <System.Runtime.CompilerServices.ExtensionAttribute()>
-        Public Function IsSubclassOf(source As Type, other As Type) As Boolean
-            Return source.IsSubclassOf(other)
         End Function
 
         Public ReadOnly Property BindingFlagsInvokeMethod As BindingFlags
@@ -334,7 +320,7 @@ Namespace Global.Microsoft.VisualBasic.CompilerServices
                 ' fallback to "IsEquivalentTo"
                 Dim fallbackMemberEquivalence As Func(Of MethodBase, MethodBase, Boolean) = Function(m1param, m2param) m1param.IsEquivalentTo(m2param)
 
-                ' fallback must work 
+                ' fallback must work
                 s_MemberEquivalence = fallbackMemberEquivalence
                 Return fallbackMemberEquivalence(m1, m2)
             End Function

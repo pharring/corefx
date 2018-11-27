@@ -14,6 +14,7 @@ namespace System.Xml.Serialization
     using System.Globalization;
     using System.Xml.Serialization.Configuration;
     using System.Diagnostics;
+    using System.Xml.Serialization;
 
 
     /// <include file='doc\XmlSerializerFactory.uex' path='docs/doc[@for="XmlSerializerFactory"]/*' />
@@ -39,7 +40,7 @@ namespace System.Xml.Serialization
         /// </devdoc>
         public XmlSerializer CreateSerializer(Type type, XmlRootAttribute root)
         {
-            return CreateSerializer(type, null, new Type[0], root, null, null);
+            return CreateSerializer(type, null, Array.Empty<Type>(), root, null, null);
         }
 
         /// <include file='doc\XmlSerializerFactory.uex' path='docs/doc[@for="XmlSerializerFactory.CreateSerializer3"]/*' />
@@ -57,7 +58,7 @@ namespace System.Xml.Serialization
         /// </devdoc>
         public XmlSerializer CreateSerializer(Type type, XmlAttributeOverrides overrides)
         {
-            return CreateSerializer(type, overrides, new Type[0], null, null, null);
+            return CreateSerializer(type, overrides, Array.Empty<Type>(), null, null, null);
         }
 
         /// <include file='doc\XmlSerializerFactory.uex' path='docs/doc[@for="XmlSerializerFactory.CreateSerializer5"]/*' />
@@ -90,11 +91,6 @@ namespace System.Xml.Serialization
         public XmlSerializer CreateSerializer(Type type, XmlAttributeOverrides overrides, Type[] extraTypes, XmlRootAttribute root, string defaultNamespace, string location)
         {
             return new XmlSerializer(type, overrides, extraTypes, root, defaultNamespace, location);
-        }
-
-        private void DemandForUserLocationOrEvidence()
-        {
-            // Ensure full trust before asserting full file access to the user-provided location or evidence
         }
     }
 }

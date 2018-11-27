@@ -7,7 +7,6 @@ using System.Collections.Generic;
 
 namespace System.CodeDom
 {
-    [Serializable]
     public class CodeNamespaceImportCollection : IList
     {
         private readonly ArrayList _data = new ArrayList(); // not List<CodeNamespaceImport> to provide desktop-consistent semantics for CopyTo
@@ -15,7 +14,7 @@ namespace System.CodeDom
 
         public CodeNamespaceImport this[int index]
         {
-            get { return (CodeNamespaceImport)_data[index]; }
+            get => (CodeNamespaceImport)_data[index];
             set
             {
                 _data[index] = value;
@@ -70,7 +69,7 @@ namespace System.CodeDom
 
         object IList.this[int index]
         {
-            get { return this[index]; }
+            get => this[index];
             set
             {
                 this[index] = (CodeNamespaceImport)value;

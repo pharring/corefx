@@ -13,7 +13,6 @@ using System.Threading;
 using System.Threading.Tasks;
 namespace System.Net
 {
-    [Serializable]
     public abstract class WebRequest :  MarshalByRefObject, ISerializable
     {
         internal class WebRequestPrefixElement
@@ -35,14 +34,20 @@ namespace System.Net
 
         protected WebRequest() { }
 
-        protected WebRequest(SerializationInfo serializationInfo, StreamingContext streamingContext) { }
+        protected WebRequest(SerializationInfo serializationInfo, StreamingContext streamingContext)
+        {
+            throw new PlatformNotSupportedException();
+        }
 
         void ISerializable.GetObjectData(SerializationInfo serializationInfo, StreamingContext streamingContext)
         {
-            GetObjectData(serializationInfo, streamingContext);
+            throw new PlatformNotSupportedException();
         }
 
-        protected virtual void GetObjectData(SerializationInfo serializationInfo, StreamingContext streamingContext) { }
+        protected virtual void GetObjectData(SerializationInfo serializationInfo, StreamingContext streamingContext)
+        {
+            throw new PlatformNotSupportedException();
+        }
 
         // Create a WebRequest.
         //
@@ -100,7 +105,7 @@ namespace System.Net
                 if (LookupLength >= Current.Prefix.Length)
                 {
                     // It is. See if these match.
-                    if (String.Compare(Current.Prefix,
+                    if (string.Compare(Current.Prefix,
                                        0,
                                        LookupUri,
                                        0,
@@ -258,7 +263,7 @@ namespace System.Net
                 Uri tempUri;
                 if (Uri.TryCreate(prefix, UriKind.Absolute, out tempUri))
                 {
-                    String cookedUri = tempUri.AbsoluteUri;
+                    string cookedUri = tempUri.AbsoluteUri;
 
                     // Special case for when a partial host matching is requested, drop the added trailing slash
                     // IE: http://host could match host or host.domain
@@ -568,6 +573,7 @@ namespace System.Net
                 lock (s_internalSyncObject)
                 {
                     s_DefaultWebProxy = value;
+                    s_DefaultWebProxyInitialized = true;
                 }
             }
         }

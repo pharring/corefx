@@ -10,9 +10,6 @@ using System.Security.Permissions;
 
 namespace System.DirectoryServices.AccountManagement
 {
-#pragma warning disable 618    // Have not migrated to v4 transparency yet
-    [System.Security.SecurityCritical(System.Security.SecurityCriticalScope.Everything)]
-#pragma warning restore 618
     [DirectoryRdnPrefix("CN")]
     public class AuthenticablePrincipal : Principal
     {
@@ -60,7 +57,7 @@ namespace System.DirectoryServices.AccountManagement
 
                 // We don't want to let them set a null value.
                 if (!value.HasValue)
-                    throw new ArgumentNullException("value");
+                    throw new ArgumentNullException(nameof(value));
 
                 HandleSet<bool>(ref _enabled, value.Value, ref _enabledChanged,
                                   PropertyNames.AuthenticablePrincipalEnabled);
@@ -332,7 +329,7 @@ namespace System.DirectoryServices.AccountManagement
         internal protected AuthenticablePrincipal(PrincipalContext context)
         {
             if (context == null)
-                throw new ArgumentException(StringResources.NullArguments);
+                throw new ArgumentException(SR.NullArguments);
 
             this.ContextRaw = context;
             this.unpersisted = true;
@@ -366,13 +363,13 @@ namespace System.DirectoryServices.AccountManagement
         {
             if ((subtype != typeof(AuthenticablePrincipal)) &&
                  (!subtype.IsSubclassOf(typeof(AuthenticablePrincipal))))
-                throw new ArgumentException(StringResources.AuthenticablePrincipalMustBeSubtypeOfAuthPrinc);
+                throw new ArgumentException(SR.AuthenticablePrincipalMustBeSubtypeOfAuthPrinc);
 
             if (context == null)
-                throw new ArgumentNullException("context");
+                throw new ArgumentNullException(nameof(context));
 
             if (subtype == null)
-                throw new ArgumentNullException("subtype");
+                throw new ArgumentNullException(nameof(subtype));
         }
 
         //

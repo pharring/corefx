@@ -9,16 +9,18 @@ using System.Diagnostics;
 using System.Globalization;
 using System.Collections.Generic;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
+using System.Threading.Tasks;
 
 namespace System.Xml
 {
     internal partial class XmlTextReaderImpl : XmlReader, IXmlLineInfo, IXmlNamespaceResolver
     {
         private static UTF8Encoding s_utf8BomThrowing;
-        
+
         private static UTF8Encoding UTF8BomThrowing =>
             s_utf8BomThrowing ?? (s_utf8BomThrowing = new UTF8Encoding(encoderShouldEmitUTF8Identifier: true, throwOnInvalidBytes: true));
-        
+
         //
         // Private helper types
         //
@@ -452,6 +454,7 @@ namespace System.Xml
         }
         internal XmlTextReaderImpl(string url, Stream input, XmlNameTable nt) : this(nt)
         {
+            ConvertAbsoluteUnixPathToAbsoluteUri(ref url, resolver: null);
             _namespaceManager = new XmlNamespaceManager(nt);
             if (url == null || url.Length == 0)
             {
@@ -478,6 +481,7 @@ namespace System.Xml
         }
         internal XmlTextReaderImpl(string url, TextReader input, XmlNameTable nt) : this(nt)
         {
+            ConvertAbsoluteUnixPathToAbsoluteUri(ref url, resolver: null);
             _namespaceManager = new XmlNamespaceManager(nt);
             _reportedBaseUri = (url != null) ? url : string.Empty;
             InitTextReaderInput(_reportedBaseUri, input);
@@ -622,9 +626,8 @@ namespace System.Xml
             {
                 //this will be hit when user create a XmlReader by setting Async, but the first call is Read() instead of ReadAsync(), 
                 //then we still should create an async stream here. And wait for the method finish.
-                System.Threading.Tasks.Task<object> t = _laterInitParam.inputUriResolver.GetEntityAsync(_laterInitParam.inputbaseUri, string.Empty, typeof(Stream));
-                t.Wait();
-                stream = (Stream)t.Result;
+                Task<object> t = _laterInitParam.inputUriResolver.GetEntityAsync(_laterInitParam.inputbaseUri, string.Empty, typeof(Stream));
+                stream = (Stream)t.GetAwaiter().GetResult();
             }
             else
             {
@@ -670,6 +673,7 @@ namespace System.Xml
                                     XmlParserContext context, bool closeInput)
             : this(settings.GetXmlResolver(), settings, context)
         {
+            ConvertAbsoluteUnixPathToAbsoluteUri(ref baseUriStr, settings.GetXmlResolver());
             // get BaseUri from XmlParserContext
             if (context != null)
             {
@@ -735,6 +739,7 @@ namespace System.Xml
         internal XmlTextReaderImpl(TextReader input, XmlReaderSettings settings, string baseUriStr, XmlParserContext context)
             : this(settings.GetXmlResolver(), settings, context)
         {
+            ConvertAbsoluteUnixPathToAbsoluteUri(ref baseUriStr, settings.GetXmlResolver());
             // get BaseUri from XmlParserContext
             if (context != null)
             {
@@ -777,7 +782,6 @@ namespace System.Xml
 
             _laterInitParam = null;
         }
-
 
         // Initializes a new instance of the XmlTextReaderImpl class for fragment parsing.
         // This constructor is used by XmlBinaryReader for nested text XML
@@ -988,8 +992,6 @@ namespace System.Xml
         {
             get
             {
-				// TODO: check if this comment is valid
-                // Project-N: why is this true given that ResolveEntity always throws an exception in SL?
                 return true;
             }
         }
@@ -1007,7 +1009,7 @@ namespace System.Xml
         public override string GetAttribute(string name)
         {
             int i;
-            if (name.IndexOf(':') == -1)
+            if (!name.Contains(':'))
             {
                 i = GetIndexOfAttributeWithoutPrefix(name);
             }
@@ -1047,7 +1049,7 @@ namespace System.Xml
         public override bool MoveToAttribute(string name)
         {
             int i;
-            if (name.IndexOf(':') == -1)
+            if (!name.Contains(':'))
             {
                 i = GetIndexOfAttributeWithoutPrefix(name);
             }
@@ -1376,7 +1378,7 @@ namespace System.Xml
         }
 
         // Returns NamespaceURI associated with the specified prefix in the current namespace scope.
-        public override String LookupNamespace(String prefix)
+        public override string LookupNamespace(string prefix)
         {
             if (!_supportNamespaces)
             {
@@ -2913,21 +2915,8 @@ namespace System.Xml
             }
             SetupEncoding(encoding);
 
-            // eat preamble 
-            byte[] preamble = _ps.encoding.GetPreamble();
-            int preambleLen = preamble.Length;
-            int i;
-            for (i = 0; i < preambleLen && i < _ps.bytesUsed; i++)
-            {
-                if (_ps.bytes[i] != preamble[i])
-                {
-                    break;
-                }
-            }
-            if (i == preambleLen)
-            {
-                _ps.bytePos = preambleLen;
-            }
+            // eat preamble
+            EatPreamble();
 
             _documentStartBytePos = _ps.bytePos;
 
@@ -3112,12 +3101,6 @@ namespace System.Xml
             _reportedEncoding = _ps.encoding;
         }
 
-        private void OpenUrlDelegate(object xmlResolver)
-        {
-            // Safe to have valid resolver here as it is not used to parse DTD
-            _ps.stream = (Stream)GetTempResolver().GetEntity(_ps.baseUri, null, typeof(Stream));
-        }
-
         // Stream input only: detect encoding from the first 4 bytes of the byte buffer starting at ps.bytes[ps.bytePos]
         private Encoding DetectEncoding()
         {
@@ -3133,7 +3116,7 @@ namespace System.Xml
 
             switch (first2Bytes)
             {
-				// Removing USC4 encoding
+                // Removing USC4 encoding
                 case 0x0000:
                     switch (next2Bytes)
                     {
@@ -3230,6 +3213,24 @@ namespace System.Xml
             }
         }
 
+        private void EatPreamble()
+        {
+            ReadOnlySpan<byte> preamble = _ps.encoding.Preamble;
+            int preambleLen = preamble.Length;
+            int i;
+            for (i = 0; i < preambleLen && i < _ps.bytesUsed; i++)
+            {
+                if (_ps.bytes[i] != preamble[i])
+                {
+                    break;
+                }
+            }
+            if (i == preambleLen)
+            {
+                _ps.bytePos = preambleLen;
+            }
+        }
+
         // Switches the reader's encoding
         private void SwitchEncoding(Encoding newEncoding)
         {
@@ -3253,14 +3254,14 @@ namespace System.Xml
                 return _ps.encoding;
             }
 
-            if (String.Equals(newEncodingName, "ucs-2", StringComparison.OrdinalIgnoreCase) ||
-                String.Equals(newEncodingName, "utf-16", StringComparison.OrdinalIgnoreCase) ||
-                String.Equals(newEncodingName, "iso-10646-ucs-2", StringComparison.OrdinalIgnoreCase) ||
-                String.Equals(newEncodingName, "ucs-4", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(newEncodingName, "ucs-2", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(newEncodingName, "utf-16", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(newEncodingName, "iso-10646-ucs-2", StringComparison.OrdinalIgnoreCase) ||
+                string.Equals(newEncodingName, "ucs-4", StringComparison.OrdinalIgnoreCase))
             {
                 if (_ps.encoding.WebName != "utf-16BE" &&
                      _ps.encoding.WebName != "utf-16" &&
-                     !String.Equals(newEncodingName, "ucs-4", StringComparison.OrdinalIgnoreCase))
+                     !string.Equals(newEncodingName, "ucs-4", StringComparison.OrdinalIgnoreCase))
                 {
                     if (_afterResetState)
                     {
@@ -3275,7 +3276,7 @@ namespace System.Xml
             }
 
             Encoding newEncoding = null;
-            if (String.Equals(newEncodingName, "utf-8", StringComparison.OrdinalIgnoreCase))
+            if (string.Equals(newEncodingName, "utf-8", StringComparison.OrdinalIgnoreCase))
             {
                 newEncoding = UTF8BomThrowing;
             }
@@ -3915,7 +3916,7 @@ namespace System.Xml
             if (CompatibilitySwitches.IsAppEarlierThanWindowsPhone8)
                 mangoQuirks = true;
 #endif
-            for (; ;)
+            for (;;)
             {
                 bool needMoreChars = false;
                 int pos = _ps.charPos;
@@ -4150,7 +4151,7 @@ namespace System.Xml
         // Parses element content
         private bool ParseElementContent()
         {
-            for (; ;)
+            for (;;)
             {
                 int pos = _ps.charPos;
                 char[] chars = _ps.chars;
@@ -4974,7 +4975,7 @@ namespace System.Xml
                     if (_normalize)
                     {
                         string val = new string(chars, _ps.charPos, pos - _ps.charPos);
-                        Debug.Assert(val == XmlComplianceUtil.CDataNormalize(val), "The attribute value is not CDATA normalized!"); 
+                        Debug.Assert(val == XmlComplianceUtil.CDataNormalize(val), "The attribute value is not CDATA normalized!");
                     }
 #endif
                     attr.SetValue(chars, _ps.charPos, pos - _ps.charPos);
@@ -7142,9 +7143,9 @@ namespace System.Xml
             int wsCount = 0;
             char[] chars = _ps.chars;
 
-            for (; ;)
+            for (;;)
             {
-                for (; ;)
+                for (;;)
                 {
                     switch (chars[pos])
                     {
@@ -8238,15 +8239,15 @@ namespace System.Xml
             }
             if (count < 0)
             {
-                throw new ArgumentOutOfRangeException((_incReadDecoder is IncrementalReadCharsDecoder) ? nameof(count): "len");
+                throw new ArgumentOutOfRangeException((_incReadDecoder is IncrementalReadCharsDecoder) ? nameof(count) : "len");
             }
             if (index < 0)
             {
-                throw new ArgumentOutOfRangeException((_incReadDecoder is IncrementalReadCharsDecoder) ? nameof(index): "offset");
+                throw new ArgumentOutOfRangeException((_incReadDecoder is IncrementalReadCharsDecoder) ? nameof(index) : "offset");
             }
             if (array.Length - index < count)
             {
-                throw new ArgumentException((_incReadDecoder is IncrementalReadCharsDecoder) ? nameof(count): "len");
+                throw new ArgumentException((_incReadDecoder is IncrementalReadCharsDecoder) ? nameof(count) : "len");
             }
 
             if (count == 0)
@@ -9436,7 +9437,7 @@ namespace System.Xml
 
             _incReadDecoder.SetNextOutputBuffer(buffer, index, count);
 
-            for (; ;)
+            for (;;)
             {
                 // read what is already cached in curNode
                 int charsRead = 0;
@@ -9586,7 +9587,7 @@ namespace System.Xml
 
         /// <summary>
         /// This method should be called every time the reader is about to consume some number of
-        ///   characters from the input. It will count it agains the security counters and
+        ///   characters from the input. It will count it against the security counters and
         ///   may throw if some of the security limits are exceeded.
         /// </summary>
         /// <param name="characters">Number of characters to be consumed.</param>
@@ -9633,7 +9634,6 @@ namespace System.Xml
             }
         }
 
-        [System.Security.SecuritySafeCritical]
         internal static unsafe void AdjustLineInfo(char[] chars, int startPos, int endPos, bool isNormalized, ref LineInfo lineInfo)
         {
             Debug.Assert(startPos >= 0);
@@ -9646,7 +9646,6 @@ namespace System.Xml
             }
         }
 
-        [System.Security.SecuritySafeCritical]
         internal static unsafe void AdjustLineInfo(string str, int startPos, int endPos, bool isNormalized, ref LineInfo lineInfo)
         {
             Debug.Assert(startPos >= 0);
@@ -9659,7 +9658,6 @@ namespace System.Xml
             }
         }
 
-        [System.Security.SecurityCritical]
         internal static unsafe void AdjustLineInfo(char* pChars, int length, bool isNormalized, ref LineInfo lineInfo)
         {
             int lastNewLinePos = -1;
@@ -9820,6 +9818,8 @@ namespace System.Xml
         {
             Buffer.BlockCopy(src, srcOffset, dst, dstOffset, count);
         }
+
+        static partial void ConvertAbsoluteUnixPathToAbsoluteUri(ref string url, XmlResolver resolver);
     }
 }
 

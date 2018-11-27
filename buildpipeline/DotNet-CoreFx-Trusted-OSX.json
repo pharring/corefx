@@ -1,6 +1,28 @@
 {
   "build": [
     {
+      "environment": {},
+      "enabled": true,
+      "continueOnError": true,
+      "displayName": "run begin.sh",
+      "timeoutInMinutes": 0,
+      "alwaysRun": true,
+      "task": {
+        "id": "10f1f9a1-74b0-47ab-87bf-e3c9c68e8b0d",
+        "versionSpec": "0.*",
+        "definitionType": "task"
+      },
+      "inputs": {
+        "type": "InlineScript",
+        "scriptPath": "",
+        "args": "",
+        "cwd": "",
+        "failOnStandardError": "false",
+        "script": "if [ -f \"$AGENTTOOLSPATH/begin.sh\" ]; then echo \"$AGENTTOOLSPATH/begin.sh script found. Executing...\"; $AGENTTOOLSPATH/begin.sh ; else echo \"$AGENTTOOLSPATH/begin.sh script does not exist. Moving on.\" ; fi"
+      }
+    },
+    {
+      "environment": {},
       "enabled": true,
       "continueOnError": false,
       "alwaysRun": false,
@@ -17,6 +39,7 @@
       }
     },
     {
+      "environment": {},
       "enabled": true,
       "continueOnError": false,
       "alwaysRun": false,
@@ -35,6 +58,7 @@
       }
     },
     {
+      "environment": {},
       "enabled": true,
       "continueOnError": false,
       "alwaysRun": false,
@@ -53,64 +77,11 @@
       }
     },
     {
+      "environment": {},
       "enabled": true,
       "continueOnError": false,
       "alwaysRun": false,
-      "displayName": "Run $(Agent.BuildDirectory)/s/corefx/clean.sh",
-      "timeoutInMinutes": 0,
-      "task": {
-        "id": "d9bafed4-0b18-4f58-968d-86655b4d2ce9",
-        "versionSpec": "1.*",
-        "definitionType": "task"
-      },
-      "inputs": {
-        "filename": "$(Agent.BuildDirectory)/s/corefx/clean.sh",
-        "arguments": "-all",
-        "workingFolder": "$(Agent.BuildDirectory)/s/corefx",
-        "failOnStandardError": "false"
-      }
-    },
-    {
-      "enabled": true,
-      "continueOnError": false,
-      "alwaysRun": false,
-      "displayName": "Run $(Agent.BuildDirectory)/s/corefx/sync.sh",
-      "timeoutInMinutes": 0,
-      "task": {
-        "id": "d9bafed4-0b18-4f58-968d-86655b4d2ce9",
-        "versionSpec": "1.*",
-        "definitionType": "task"
-      },
-      "inputs": {
-        "filename": "$(Agent.BuildDirectory)/s/corefx/sync.sh",
-        "arguments": "$(PB_SyncArguments)",
-        "workingFolder": "$(Agent.BuildDirectory)/s/corefx/",
-        "failOnStandardError": "false"
-      }
-    },
-    {
-      "enabled": true,
-      "continueOnError": false,
-      "alwaysRun": false,
-      "displayName": "Generate Native Version Assets",
-      "timeoutInMinutes": 0,
-      "task": {
-        "id": "d9bafed4-0b18-4f58-968d-86655b4d2ce9",
-        "versionSpec": "1.*",
-        "definitionType": "task"
-      },
-      "inputs": {
-        "filename": "$(Agent.BuildDirectory)/s/corefx/build-managed.sh",
-        "arguments": "-OfficialBuildId=$(OfficialBuildId) -- /t:GenerateVersionSourceFile /p:GenerateVersionSourceFile=true",
-        "workingFolder": "$(Agent.BuildDirectory)/s/corefx",
-        "failOnStandardError": "false"
-      }
-    },
-    {
-      "enabled": true,
-      "continueOnError": false,
-      "alwaysRun": false,
-      "displayName": "Run $(Agent.BuildDirectory)/s/corefx/build.sh",
+      "displayName": "Run Build",
       "timeoutInMinutes": 0,
       "task": {
         "id": "d9bafed4-0b18-4f58-968d-86655b4d2ce9",
@@ -119,48 +90,53 @@
       },
       "inputs": {
         "filename": "$(Agent.BuildDirectory)/s/corefx/build.sh",
-        "arguments": "$(PB_BuildArguments)",
+        "arguments": "--ci /p:OfficialBuildId=$(OfficialBuildId) $(PB_BuildArguments) $(PB_SyncArguments)",
         "workingFolder": "$(Agent.BuildDirectory)/s/corefx/",
         "failOnStandardError": "false"
       }
     },
     {
+      "environment": {},
       "enabled": true,
       "continueOnError": false,
       "alwaysRun": false,
-      "displayName": "Run $(Agent.BuildDirectory)/s/corefx/build-tests.sh",
+      "displayName": "Run Build Tests",
       "timeoutInMinutes": 0,
+      "condition": "and(succeeded(), ne(variables.PB_SkipTests, 'true'))",
       "task": {
         "id": "d9bafed4-0b18-4f58-968d-86655b4d2ce9",
         "versionSpec": "1.*",
         "definitionType": "task"
       },
       "inputs": {
-        "filename": "$(Agent.BuildDirectory)/s/corefx/build-tests.sh",
-        "arguments": "$(PB_BuildTestsArguments)",
+        "filename": "$(Agent.BuildDirectory)/s/corefx/build.sh",
+        "arguments": "--ci -test $(PB_BuildTestsArguments)",
         "workingFolder": "$(Agent.BuildDirectory)/s/corefx/",
         "failOnStandardError": "false"
       }
     },
     {
+      "environment": {},
       "enabled": true,
       "continueOnError": false,
       "alwaysRun": false,
       "displayName": "Create Helix Test Jobs",
       "timeoutInMinutes": 0,
+      "condition": "and(succeeded(), ne(variables.PB_SkipTests, 'true'), ne(variables.PB_EnableCloudTest, 'false'))",
       "task": {
         "id": "d9bafed4-0b18-4f58-968d-86655b4d2ce9",
         "versionSpec": "1.*",
         "definitionType": "task"
       },
       "inputs": {
-        "filename": "$(Agent.BuildDirectory)/s/corefx/Tools/msbuild.sh",
-        "arguments": "$(Agent.BuildDirectory)/s/corefx/src/upload-tests.proj $(PB_CreateHelixArguments) /p:\"CloudDropAccountName=$(PB_CloudDropAccountName)\" /p:\"CloudResultsAccountName=$(PB_CloudResultsAccountName)\" /p:\"CloudDropAccessToken=$(CloudDropAccessToken)\" /p:\"CloudResultsAccessToken=$(OutputCloudResultsAccessToken)\" /p:\"HelixApiAccessKey=$(HelixApiAccessKey)\" /p:HelixApiEndpoint=$(PB_HelixApiEndPoint) /p:\"Branch=$(SourceBranch)\" /p:\"TargetQueues=$(PB_TargetQueue)\" /p:\"OfficialBuildId=$(OfficialBuildId)\"",
+        "filename": "$(Agent.BuildDirectory)/s/corefx/eng/common/msbuild.sh",
+        "arguments": "--warnaserror false $(Agent.BuildDirectory)/s/corefx/src/upload-tests.proj $(PB_CreateHelixArguments) /p:\"CloudDropAccountName=$(PB_CloudDropAccountName)\" /p:\"CloudResultsAccountName=$(PB_CloudResultsAccountName)\" /p:\"CloudDropAccessToken=$(CloudDropAccessToken)\" /p:\"CloudResultsAccessToken=$(OutputCloudResultsAccessToken)\" /p:\"HelixApiAccessKey=$(HelixApiAccessKey)\" /p:HelixApiEndpoint=$(PB_HelixApiEndPoint) /p:\"Branch=$(SourceBranch)\" /p:\"TargetQueues=$(PB_TargetQueue)\" /p:\"OfficialBuildId=$(OfficialBuildId)\" /p:\"ProductBuildId=$(ProductBuildId)\"",
         "workingFolder": "",
         "failOnStandardError": "false"
       }
     },
     {
+      "environment": {},
       "enabled": true,
       "continueOnError": false,
       "alwaysRun": false,
@@ -172,45 +148,80 @@
         "definitionType": "task"
       },
       "inputs": {
-        "filename": "$(Agent.BuildDirectory)/s/corefx/publish-packages.sh",
-        "arguments": "-AzureAccount=$(PB_CloudDropAccountName) -AzureToken=$(CloudDropAccessToken) -Container=$(PB_Label) -- /p:OverwriteOnPublish=true",
+        "filename": "$(Agent.BuildDirectory)/s/corefx/eng/common/msbuild.sh",
+        "arguments": "--warnaserror false $(Agent.BuildDirectory)/s/corefx/src/publish.proj /p:CloudDropAccountName=$(PB_CloudDropAccountName) /p:CloudDropAccessToken=$(CloudDropAccessToken) /p:ContainerName=$(PB_Label) /flp:v=diag;LogFile=publish-packages.log /p:OverwriteOnPublish=false",
         "workingFolder": "$(Agent.BuildDirectory)/s/corefx/",
         "failOnStandardError": "false"
       }
     },
     {
+      "environment": {},
       "enabled": true,
-      "continueOnError": false,
+      "continueOnError": true,
       "alwaysRun": true,
-      "displayName": "Copy Publish Artifact: BuildLogs",
+      "displayName": "Copy Files to: $(Build.StagingDirectory)\\BuildLogs",
       "timeoutInMinutes": 0,
+      "condition": "succeededOrFailed()",
       "task": {
-        "id": "1d341bb0-2106-458c-8422-d00bcea6512a",
+        "id": "5bfb729a-a7c8-4a78-a7c3-8d717bb7c13c",
+        "versionSpec": "2.*",
+        "definitionType": "task"
+      },
+      "inputs": {
+        "SourceFolder": "",
+        "Contents": "*.log\n$(Agent.BuildDirectory)/s/corefx/*.log",
+        "TargetFolder": "$(Build.StagingDirectory)\\BuildLogs",
+        "CleanTargetFolder": "false",
+        "OverWrite": "false",
+        "flattenFolders": "false"
+      }
+    },
+    {
+      "environment": {},
+      "enabled": true,
+      "continueOnError": true,
+      "alwaysRun": true,
+      "displayName": "Publish Artifact: BuildLogs",
+      "timeoutInMinutes": 0,
+      "condition": "succeededOrFailed()",
+      "task": {
+        "id": "2ff763a7-ce83-4e1f-bc89-0ae63477cebe",
         "versionSpec": "1.*",
         "definitionType": "task"
       },
       "inputs": {
-        "CopyRoot": "",
-        "Contents": "*.log\n$(Agent.BuildDirectory)/s/corefx/*.log",
+        "PathtoPublish": "$(Build.StagingDirectory)\\BuildLogs",
         "ArtifactName": "BuildLogs",
         "ArtifactType": "Container",
-        "TargetPath": "\\\\my\\share\\$(Build.DefinitionName)\\$(Build.BuildNumber)"
+        "TargetPath": "\\\\my\\share\\$(Build.DefinitionName)\\$(Build.BuildNumber)",
+        "Parallel": "false",
+        "ParallelCount": "8"
+      }
+    },
+    {
+      "environment": {},
+      "enabled": true,
+      "continueOnError": true,
+      "displayName": "run end.sh",
+      "timeoutInMinutes": 0,
+      "condition": "always()",
+      "alwaysRun": true,
+      "task": {
+        "id": "10f1f9a1-74b0-47ab-87bf-e3c9c68e8b0d",
+        "versionSpec": "0.*",
+        "definitionType": "task"
+      },
+      "inputs": {
+        "type": "InlineScript",
+        "scriptPath": "",
+        "args": "",
+        "cwd": "",
+        "failOnStandardError": "false",
+        "script": "if [ -f \"$AGENTTOOLSPATH/end.sh\" ]; then echo \"$AGENTTOOLSPATH/end.sh script found. Executing...\"; $AGENTTOOLSPATH/end.sh ; else echo \"$AGENTTOOLSPATH/end.sh script does not exist. Moving on.\" ; fi"
       }
     }
   ],
   "options": [
-    {
-      "enabled": false,
-      "definition": {
-        "id": "7c555368-ca64-4199-add6-9ebaf0b0137d"
-      },
-      "inputs": {
-        "multipliers": "[]",
-        "parallel": "false",
-        "continueOnError": "true",
-        "additionalFields": "{}"
-      }
-    },
     {
       "enabled": false,
       "definition": {
@@ -230,6 +241,16 @@
       "inputs": {
         "additionalFields": "{}"
       }
+    },
+    {
+      "enabled": false,
+      "definition": {
+        "id": "5d58cc01-7c75-450c-be18-a388ddb129ec"
+      },
+      "inputs": {
+        "branchFilters": "[\"+refs/heads/*\"]",
+        "additionalFields": "{}"
+      }
     }
   ],
   "variables": {
@@ -244,8 +265,20 @@
       "value": null,
       "isSecret": true
     },
+    "OutputCloudResultsAccessToken": {
+      "value": null,
+      "isSecret": true
+    },
+    "HelixApiAccessKey": {
+      "value": null,
+      "isSecret": true
+    },
     "OfficialBuildId": {
       "value": "$(Build.BuildNumber)",
+      "allowOverride": true
+    },
+    "ProductBuildId": {
+      "value": "",
       "allowOverride": true
     },
     "PB_Label": {
@@ -268,26 +301,37 @@
       "allowOverride": true
     },
     "PB_VsoCorefxGitUrl": {
-      "value": "https://github.com/dotnet/corefx"
-    },
-    "Build.Clean": {
-      "value": "all"
+      "value": "https://github.com/dotnet/corefx",
+      "isSecret": true
     },
     "PB_BuildArguments": {
-      "value": "-buildArch=x64 -Release",
+      "value": "",
       "allowOverride": true
     },
     "PB_BuildTestsArguments": {
-      "value": "-buildArch=x64 -Release -SkipTests",
+      "value": "",
       "allowOverride": true
     },
     "PB_SyncArguments": {
-      "value": "-p -- /p:ArchGroup=x64",
+      "value": "",
       "allowOverride": true
     },
     "PB_CreateHelixArguments": {
       "value": "/t:CloudBuild /p:ArchGroup=x64 /p:ConfigurationGroup=Release /p:\"EnableCloudTest=true /p:\"TestProduct=corefx /p:\"TimeoutInSeconds=1200\" /p:\"TargetOS=OSX\" /p:FilterToOSGroup=OSX",
       "allowOverride": true
+    },
+    "PB_SkipTests": {
+      "value": "false",
+      "allowOverride": true
+    },
+    "PB_PackageVersionPropsUrl": {
+      "value": ""
+    },
+    "PACKAGEVERSIONPROPSURL": {
+      "value": "$(PB_PackageVersionPropsUrl)"
+    },
+    "PB_AssetRootUrl": {
+      "value": ""
     }
   },
   "demands": [
@@ -310,7 +354,8 @@
   ],
   "buildNumberFormat": "$(date:yyyyMMdd)$(rev:-rr)",
   "jobAuthorizationScope": "projectCollection",
-  "jobTimeoutInMinutes": 60,
+  "jobTimeoutInMinutes": 120,
+  "jobCancelTimeoutInMinutes": 5,
   "repository": {
     "properties": {
       "labelSources": "0",
@@ -318,7 +363,9 @@
       "fetchDepth": "0",
       "gitLfsSupport": "false",
       "skipSyncSource": "true",
-      "cleanOptions": "3"
+      "cleanOptions": "3",
+      "checkoutNestedSubmodules": "false",
+      "labelSourcesFormat": "$(build.buildNumber)"
     },
     "id": "0a2b2664-c1be-429c-9b40-8a24dee27a4a",
     "type": "TfsGit",
@@ -328,25 +375,29 @@
     "clean": "false",
     "checkoutSubmodules": false
   },
+  "processParameters": {},
   "quality": "definition",
+  "drafts": [],
   "queue": {
+    "id": 330,
+    "name": "DotNetCore-Build",
     "pool": {
       "id": 97,
       "name": "DotNetCore-Build"
-    },
-    "id": 330,
-    "name": "DotNetCore-Build"
+    }
   },
-  "path": "\\",
-  "type": "build",
   "id": 1053,
   "name": "DotNet-CoreFx-Trusted-OSX",
+  "path": "\\",
+  "type": "build",
+  "queueStatus": "enabled",
   "project": {
     "id": "0bdbc590-a062-4c3f-b0f6-9383f67865ee",
     "name": "DevDiv",
     "description": "Visual Studio and DevDiv team project for git source code repositories.  Work items will be added for Adams, Dev14 work items are tracked in vstfdevdiv.  ",
     "url": "https://devdiv.visualstudio.com/DefaultCollection/_apis/projects/0bdbc590-a062-4c3f-b0f6-9383f67865ee",
     "state": "wellFormed",
-    "revision": 418097459
+    "revision": 418098432,
+    "visibility": "organization"
   }
 }

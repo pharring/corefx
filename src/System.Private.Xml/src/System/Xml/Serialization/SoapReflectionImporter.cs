@@ -11,7 +11,8 @@ namespace System.Xml.Serialization
     using System.Collections;
     using System.ComponentModel;
     using System.Threading;
-    using System.Linq;
+    using System.Xml;
+    using System.Xml.Serialization;
 
     /// <include file='doc\SoapReflectionImporter.uex' path='docs/doc[@for="SoapReflectionImporter"]/*' />
     /// <devdoc>
@@ -59,7 +60,7 @@ namespace System.Xml.Serialization
         public SoapReflectionImporter(SoapAttributeOverrides attributeOverrides, string defaultNamespace)
         {
             if (defaultNamespace == null)
-                defaultNamespace = String.Empty;
+                defaultNamespace = string.Empty;
             if (attributeOverrides == null)
                 attributeOverrides = new SoapAttributeOverrides();
             _attributeOverrides = attributeOverrides;
@@ -80,7 +81,8 @@ namespace System.Xml.Serialization
         private void IncludeTypes(ICustomAttributeProvider provider, RecursionLimiter limiter)
         {
             object[] attrs = provider.GetCustomAttributes(typeof(SoapIncludeAttribute), false);
-            for (int i = 0; i < attrs.Length; i++) {
+            for (int i = 0; i < attrs.Length; i++)
+            {
                 IncludeType(((SoapIncludeAttribute)attrs[i]).Type, limiter);
             }
         }
@@ -194,7 +196,7 @@ namespace System.Xml.Serialization
 
         private TypeMapping ImportTypeMapping(TypeModel model, RecursionLimiter limiter)
         {
-            return ImportTypeMapping(model, String.Empty, limiter);
+            return ImportTypeMapping(model, string.Empty, limiter);
         }
 
         private TypeMapping ImportTypeMapping(TypeModel model, string dataType, RecursionLimiter limiter)
@@ -218,7 +220,7 @@ namespace System.Xml.Serialization
 
             SoapAttributes a = GetAttributes(model.Type);
 
-            if ((a.SoapFlags & ~SoapAttributeFlags.Type) != 0)
+            if ((a.GetSoapFlags() & ~SoapAttributeFlags.Type) != 0)
                 throw new InvalidOperationException(SR.Format(SR.XmlInvalidTypeAttributes, model.Type.FullName));
 
             switch (model.TypeDesc.Kind)
@@ -263,7 +265,7 @@ namespace System.Xml.Serialization
             StructMapping mapping = new StructMapping();
             mapping.IsSoap = true;
             mapping.TypeDesc = typeDesc;
-            mapping.Members = new MemberMapping[0];
+            mapping.Members = Array.Empty<MemberMapping>();
             mapping.IncludeInSchema = false;
             mapping.TypeName = Soap.UrType;
             mapping.Namespace = XmlSchema.Namespace;
@@ -624,7 +626,7 @@ namespace System.Xml.Serialization
         {
             SoapAttributes a = GetAttributes(model.FieldInfo);
             if (a.SoapIgnore) return null;
-            if ((a.SoapFlags & ~SoapAttributeFlags.Enum) != 0)
+            if ((a.GetSoapFlags() & ~SoapAttributeFlags.Enum) != 0)
                 throw new InvalidOperationException(SR.XmlInvalidEnumAttribute);
             if (a.SoapEnum == null)
                 a.SoapEnum = new SoapEnumAttribute();
@@ -720,7 +722,7 @@ namespace System.Xml.Serialization
                 throw new InvalidOperationException(SR.XmlInvalidVoid);
             }
 
-            SoapAttributeFlags flags = a.SoapFlags;
+            SoapAttributeFlags flags = a.GetSoapFlags();
             if ((flags & SoapAttributeFlags.Attribute) == SoapAttributeFlags.Attribute)
             {
                 if (!accessor.TypeDesc.IsPrimitive && !accessor.TypeDesc.IsEnum)
@@ -733,10 +735,10 @@ namespace System.Xml.Serialization
                 attribute.Name = Accessor.EscapeQName(a.SoapAttribute == null || a.SoapAttribute.AttributeName.Length == 0 ? accessorName : a.SoapAttribute.AttributeName);
                 attribute.Namespace = a.SoapAttribute == null || a.SoapAttribute.Namespace == null ? ns : a.SoapAttribute.Namespace;
                 attribute.Form = XmlSchemaForm.Qualified; // attributes are always qualified since they're only used for encoded soap headers
-                attribute.Mapping = ImportTypeMapping(_modelScope.GetTypeModel(accessorType), (a.SoapAttribute == null ? String.Empty : a.SoapAttribute.DataType), limiter);
+                attribute.Mapping = ImportTypeMapping(_modelScope.GetTypeModel(accessorType), (a.SoapAttribute == null ? string.Empty : a.SoapAttribute.DataType), limiter);
                 attribute.Default = GetDefaultValue(model.FieldTypeDesc, a);
                 accessor.Attribute = attribute;
-                accessor.Elements = new ElementAccessor[0];
+                accessor.Elements = Array.Empty<ElementAccessor>();
             }
             else
             {
@@ -748,7 +750,7 @@ namespace System.Xml.Serialization
                 element.Name = XmlConvert.EncodeLocalName(a.SoapElement == null || a.SoapElement.ElementName.Length == 0 ? accessorName : a.SoapElement.ElementName);
                 element.Namespace = ns;
                 element.Form = form;
-                element.Mapping = ImportTypeMapping(_modelScope.GetTypeModel(accessorType), (a.SoapElement == null ? String.Empty : a.SoapElement.DataType), limiter);
+                element.Mapping = ImportTypeMapping(_modelScope.GetTypeModel(accessorType), (a.SoapElement == null ? string.Empty : a.SoapElement.DataType), limiter);
                 if (a.SoapElement != null)
                     element.IsNullable = a.SoapElement.IsNullable;
                 accessor.Elements = new ElementAccessor[] { element };
@@ -801,7 +803,7 @@ namespace System.Xml.Serialization
             if (a.SoapType != null && a.SoapType.TypeName.Length > 0)
                 typeName = a.SoapType.TypeName;
 
-            if (type.IsGenericType && typeName.IndexOf('{') >= 0)
+            if (type.IsGenericType && typeName.Contains('{'))
             {
                 Type genType = type.GetGenericTypeDefinition();
                 Type[] names = genType.GetGenericArguments();
@@ -813,7 +815,7 @@ namespace System.Xml.Serialization
                     if (typeName.Contains(argument))
                     {
                         typeName = typeName.Replace(argument, XsdTypeName(types[i]));
-                        if (typeName.IndexOf('{') < 0)
+                        if (!typeName.Contains('{'))
                         {
                             break;
                         }

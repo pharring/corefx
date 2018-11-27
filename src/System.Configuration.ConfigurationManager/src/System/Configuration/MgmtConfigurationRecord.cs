@@ -1747,7 +1747,7 @@ namespace System.Configuration
             else definitionUpdates = null;
         }
 
-        // Take a element name, and create an xml string that contains
+        // Take an element name, and create an xml string that contains
         // that element in an empty state
         private string WriteEmptyElement(string elementName)
         {
@@ -2660,7 +2660,7 @@ namespace System.Configuration
                 // Remove newness, so we won't write again
                 sectionUpdates.IsNew = false;
 
-                Debug.Assert(locationPathApplies, "locationPathApplies");
+                Debug.Assert(locationPathApplies, nameof(locationPathApplies));
                 string[] movedSectionNames = sectionUpdates.GetMovedSectionNames();
                 if (movedSectionNames != null)
                 {

@@ -1,18 +1,13 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.props))\dir.props" />
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
     <AssemblyName>System.Net.Ping</AssemblyName>
     <ProjectGuid>{85FD05E8-A4B1-4B89-ABED-33AFD200CABD}</ProjectGuid>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
+    <Configurations>netcoreapp-Unix-Debug;netcoreapp-Unix-Release;netcoreapp-Windows_NT-Debug;netcoreapp-Windows_NT-Release;uap-Windows_NT-Debug;uap-Windows_NT-Release</Configurations>
   </PropertyGroup>
-  <!-- Help VS understand available configurations -->
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'netcoreapp-Unix-Debug|AnyCPU'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'netcoreapp-Unix-Release|AnyCPU'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'netcoreapp-Windows_NT-Debug|AnyCPU'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'netcoreapp-Windows_NT-Release|AnyCPU'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'uap-Windows_NT-Debug|AnyCPU'" />
-  <PropertyGroup Condition="'$(Configuration)|$(Platform)' == 'uap-Windows_NT-Release|AnyCPU'" />
+  <PropertyGroup Condition="'$(TargetGroup)' == 'uap'">
+    <NoWarn>$(NoWarn);414</NoWarn>
+  </PropertyGroup>
   <ItemGroup>
     <Compile Include="System\Net\NetworkInformation\IPStatus.cs" />
     <Compile Include="System\Net\NetworkInformation\NetEventSource.Ping.cs" />
@@ -26,9 +21,6 @@
   <ItemGroup>
     <Compile Include="$(CommonPath)\System\Net\ByteOrder.cs">
       <Link>Common\System\Net\ByteOrder.cs</Link>
-    </Compile>
-    <Compile Include="$(CommonPath)\System\Net\IntPtrHelper.cs">
-      <Link>Common\System\Net\IntPtrHelper.cs</Link>
     </Compile>
     <Compile Include="$(CommonPath)\System\Net\IPAddressParserStatics.cs">
       <Link>Common\System\Net\IPAddressParserStatics.cs</Link>
@@ -73,14 +65,14 @@
       <Link>Common\System\Net\NetworkInformation\UnixCommandLinePing.cs</Link>
     </Compile>
     <!-- Interop -->
-    <Compile Include="$(CommonPath)\Interop\Unix\Interop.Errors.cs">
-      <Link>Common\Interop\Unix\Interop.Errors.cs</Link>
+    <Compile Include="$(CommonPath)\CoreLib\Interop\Unix\Interop.Errors.cs">
+      <Link>Common\CoreLib\Interop\Unix\Interop.Errors.cs</Link>
     </Compile>
     <Compile Include="$(CommonPath)\Interop\Unix\Interop.Libraries.cs">
       <Link>Common\Interop\Unix\Interop.Libraries.cs</Link>
     </Compile>
-    <Compile Include="$(CommonPath)\Interop\Unix\System.Native\Interop.Close.cs">
-      <Link>Common\Interop\Unix\System.Native\Interop.Close.cs</Link>
+    <Compile Include="$(CommonPath)\CoreLib\Interop\Unix\System.Native\Interop.Close.cs">
+      <Link>Common\CoreLib\Interop\Unix\System.Native\Interop.Close.cs</Link>
     </Compile>
     <Compile Include="$(CommonPath)\Interop\Unix\System.Native\Interop.Socket.cs">
       <Link>Common\Interop\Unix\System.Native\Interop.Socket.cs</Link>
@@ -89,8 +81,13 @@
       <Link>Common\Interop\Unix\System.Native\Interop.SocketAddress.cs</Link>
     </Compile>
   </ItemGroup>
-  <ItemGroup Condition=" '$(TargetsWindows)' == 'true'">
+  <ItemGroup Condition="'$(TargetsWindows)' == 'true' And '$(TargetGroup)' != 'uap'">
     <Compile Include="System\Net\NetworkInformation\Ping.Windows.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetsWindows)' == 'true' And '$(TargetGroup)' == 'uap'">
+    <Compile Include="System\Net\NetworkInformation\Ping.Windows.Uap.cs" />
+  </ItemGroup>
+  <ItemGroup Condition="'$(TargetsWindows)' == 'true'">
     <!-- System.Net Common -->
     <Compile Include="$(CommonPath)\System\Net\SocketAddressPal.Windows.cs">
       <Link>Common\System\Net\SocketAddressPal.Windows.cs</Link>
@@ -126,6 +123,9 @@
     <Compile Include="$(CommonPath)\Interop\Windows\Winsock\Interop.WSASocketW.cs">
       <Link>Common\Interop\Windows\Winsock\Interop.WSASocketW.cs</Link>
     </Compile>
+    <Compile Include="$(CommonPath)\Interop\Windows\Winsock\Interop.SocketConstructorFlags.cs">
+      <Link>Interop\Windows\Winsock\Interop.SocketConstructorFlags.cs</Link>
+    </Compile>
     <!-- System.Net.Internals -->
     <Compile Include="$(CommonPath)\System\Net\Sockets\SocketType.cs">
       <Link>Common\System\Net\Sockets\SocketType.cs</Link>
@@ -137,6 +137,7 @@
     <Reference Include="System.ComponentModel.Primitives" />
     <Reference Include="System.Diagnostics.Debug" />
     <Reference Include="System.Diagnostics.Tracing" />
+    <Reference Include="System.Memory" />
     <Reference Include="System.Net.NameResolution" />
     <Reference Include="System.Net.Primitives" />
     <Reference Include="System.Net.Sockets" />
@@ -151,6 +152,6 @@
   <ItemGroup Condition="'$(TargetsUnix)' == 'true'">
     <Reference Include="System.Diagnostics.Process" />
     <Reference Include="System.IO.FileSystem" />
+    <Reference Include="System.Runtime.InteropServices.RuntimeInformation" />
   </ItemGroup>
-  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.targets))\dir.targets" />
 </Project>

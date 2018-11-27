@@ -30,8 +30,8 @@ namespace System.Net.Sockets.Tests
         {
             using (Socket s = new Socket(AddressFamily.InterNetwork, SocketType.Stream, ProtocolType.Tcp))
             {
-                Assert.Throws<ArgumentNullException>("asyncResult", () => s.EndDisconnect(null));
-                Assert.Throws<ArgumentException>("asyncResult", () => s.EndDisconnect(Task.CompletedTask));
+                AssertExtensions.Throws<ArgumentNullException>("asyncResult", () => s.EndDisconnect(null));
+                AssertExtensions.Throws<ArgumentException>("asyncResult", () => s.EndDisconnect(Task.CompletedTask));
                 s.Dispose();
                 Assert.Throws<ObjectDisposedException>(() => s.Disconnect(true));
                 Assert.Throws<ObjectDisposedException>(() => s.BeginDisconnect(true, null, null));
@@ -68,6 +68,8 @@ namespace System.Net.Sockets.Tests
                     Assert.Equal(SocketError.Success, args.SocketError);
 
                     client.Disconnect(reuseSocket);
+
+                    Assert.False(client.Connected);
 
                     args.RemoteEndPoint = server2.EndPoint;
 
@@ -114,6 +116,7 @@ namespace System.Net.Sockets.Tests
                     }
 
                     Assert.Equal(SocketError.Success, args.SocketError);
+                    Assert.False(client.Connected);
 
                     args.RemoteEndPoint = server2.EndPoint;
 
@@ -155,6 +158,9 @@ namespace System.Net.Sockets.Tests
 
                     IAsyncResult ar = client.BeginDisconnect(reuseSocket, null, null);
                     client.EndDisconnect(ar);
+
+                    Assert.False(client.Connected);
+
                     Assert.Throws<InvalidOperationException>(() => client.EndDisconnect(ar));
 
                     args.RemoteEndPoint = server2.EndPoint;

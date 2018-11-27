@@ -96,6 +96,11 @@ namespace System.Runtime.Serialization
             _isGetOnlyCollection = true;
         }
 
+        internal void ResetIsGetOnlyCollection()
+        {
+            _isGetOnlyCollection = false;
+        }
+
 #if USE_REFEMIT
         public void InternalSerializeReference(XmlWriterDelegator xmlWriter, object obj, bool isDeclaredType, bool writeXsiType, int declaredTypeID, RuntimeTypeHandle declaredTypeHandle)
 #else
@@ -178,18 +183,16 @@ namespace System.Runtime.Serialization
         protected virtual void SerializeWithXsiType(XmlWriterDelegator xmlWriter, object obj, RuntimeTypeHandle objectTypeHandle, Type objectType, int declaredTypeID, RuntimeTypeHandle declaredTypeHandle, Type declaredType)
         {
             bool verifyKnownType = false;
-#if !uapaot
             DataContract dataContract;
             if (declaredType.IsInterface && CollectionDataContract.IsCollectionInterface(declaredType))
             {
+#if !uapaot
                 dataContract = GetDataContractSkipValidation(DataContract.GetId(objectTypeHandle), objectTypeHandle, objectType);
                 if (OnHandleIsReference(xmlWriter, dataContract, obj))
                     return;
                 dataContract = GetDataContract(declaredTypeHandle, declaredType);
 #else
-            DataContract dataContract = DataContract.GetDataContract(declaredType);
-            if (dataContract.TypeIsInterface && dataContract.TypeIsCollectionInterface)
-            {
+                dataContract = DataContract.GetDataContract(declaredType);
                 if (OnHandleIsReference(xmlWriter, dataContract, obj))
                     return;
                 if (this.Mode == SerializationMode.SharedType && dataContract.IsValidContract(this.Mode))
@@ -268,7 +271,7 @@ namespace System.Runtime.Serialization
             {
                 if (!IsKnownType(dataContract, declaredType))
                 {
-                    DataContract knownContract = ResolveDataContractFromKnownTypes(dataContract.StableName.Name, dataContract.StableName.Namespace, null /*memberTypeContract*/);
+                    DataContract knownContract = ResolveDataContractFromKnownTypes(dataContract.StableName.Name, dataContract.StableName.Namespace, null /*memberTypeContract*/, declaredType);
                     if (knownContract == null || knownContract.UnderlyingType != dataContract.UnderlyingType)
                     {
                         throw DiagnosticUtility.ExceptionUtility.ThrowHelperError(XmlObjectSerializer.CreateSerializationException(SR.Format(SR.DcTypeNotFoundOnSerialize, DataContract.GetClrTypeFullName(dataContract.UnderlyingType), dataContract.StableName.Name, dataContract.StableName.Namespace)));
@@ -857,7 +860,7 @@ namespace System.Runtime.Serialization
                     for (int i = 0; i < members.Count; i++)
                     {
                         ISerializableDataMember member = members[i];
-                        xmlWriter.WriteStartElement(member.Name, String.Empty);
+                        xmlWriter.WriteStartElement(member.Name, string.Empty);
                         WriteExtensionDataValue(xmlWriter, member.Value);
                         xmlWriter.WriteEndElement();
                     }

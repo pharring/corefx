@@ -3,6 +3,8 @@
   <PropertyGroup>
     <BuildConfigurations>
       netstandard-Windows_NT;
+      netstandard-Linux;
+      netfx;
     </BuildConfigurations>
   </PropertyGroup>
 </Project>

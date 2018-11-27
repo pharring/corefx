@@ -310,33 +310,18 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             }
         }
 
-#if netcoreapp11
-        [Fact]
-        [PlatformSpecific(TestPlatforms.OSX)]
-        public static void EphemeralKeySet_OSX()
-        {
-            // EphemeralKeySet fails when loading a PFX, and is ignored otherwise.
-            using (ImportedCollection coll = Cert.Import(TestData.Pkcs7ChainDerBytes, null, X509KeyStorageFlags.EphemeralKeySet))
-            {
-                Assert.Equal(3, coll.Collection.Count);
-            }
-
-            Assert.Throws<PlatformNotSupportedException>(
-                () => new X509Certificate2(TestData.EmptyPfx, string.Empty, X509KeyStorageFlags.EphemeralKeySet));
-        }
-#endif
-
+#if !NO_EPHEMERALKEYSET_AVAILABLE
         [Fact]
         public static void InvalidStorageFlags()
         {
             X509Certificate2Collection coll = new X509Certificate2Collection();
             byte[] nonEmptyBytes = new byte[1];
 
-            Assert.Throws<ArgumentException>(
+            AssertExtensions.Throws<ArgumentException>(
                 "keyStorageFlags",
                 () => coll.Import(nonEmptyBytes, string.Empty, (X509KeyStorageFlags)0xFF));
 
-            Assert.Throws<ArgumentException>(
+            AssertExtensions.Throws<ArgumentException>(
                 "keyStorageFlags",
                 () => coll.Import(string.Empty, string.Empty, (X509KeyStorageFlags)0xFF));
             
@@ -344,7 +329,6 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             // binary is always used by default, meaning it doesn't know EphemeralKeySet doesn't exist.
         }
 
-#if netcoreapp
         [Fact]
         public static void InvalidStorageFlags_PersistedEphemeral()
         {
@@ -354,11 +338,11 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             byte[] nonEmptyBytes = new byte[1];
             X509Certificate2Collection coll = new X509Certificate2Collection();
 
-            Assert.Throws<ArgumentException>(
+            AssertExtensions.Throws<ArgumentException>(
                 "keyStorageFlags",
                 () => coll.Import(nonEmptyBytes, string.Empty, PersistedEphemeral));
 
-            Assert.Throws<ArgumentException>(
+            AssertExtensions.Throws<ArgumentException>(
                 "keyStorageFlags",
                 () => coll.Import(string.Empty, string.Empty, PersistedEphemeral));
         }
@@ -370,12 +354,11 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             {
                 yield return new object[] { X509KeyStorageFlags.DefaultKeySet };
 
-#if netcoreapp
+#if !NO_EPHEMERALKEYSET_AVAILABLE
                 if (!RuntimeInformation.IsOSPlatform(OSPlatform.OSX))
                     yield return new object[] { X509KeyStorageFlags.EphemeralKeySet };
 #endif
             }
         }
-
     }
 }

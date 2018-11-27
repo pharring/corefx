@@ -25,13 +25,12 @@
 //    public int dwEnumerationContext;
 //}
 
+using System.Runtime.InteropServices;
+using System.Security;
+using System.Text;
+
 namespace System.DirectoryServices.ActiveDirectory
 {
-#pragma warning disable BCL0015 // CoreFxPort
-    using System;
-    using System.Runtime.InteropServices;
-    using System.Security;
-    using System.Text;
 
     internal enum DS_REPL_INFO_TYPE
     {
@@ -627,9 +626,6 @@ namespace System.DirectoryServices.ActiveDirectory
         public IntPtr domainSid = IntPtr.Zero;
     }
 
-    [
-    SuppressUnmanagedCodeSecurityAttribute()
-    ]
     internal class UnsafeNativeMethods
     {
         public const int FORMAT_MESSAGE_ALLOCATE_BUFFER = 0x00000100,
@@ -644,22 +640,16 @@ namespace System.DirectoryServices.ActiveDirectory
         public static extern int FormatMessageW(int dwFlags, int lpSource, int dwMessageId,
                                                 int dwLanguageId, StringBuilder lpBuffer, int nSize, int arguments);
 
-        [SuppressUnmanagedCodeSecurityAttribute()]
         public delegate int DsReplicaConsistencyCheck([In]IntPtr handle, int taskID, int flags);
 
-        [SuppressUnmanagedCodeSecurityAttribute()]
         public delegate int DsReplicaGetInfo2W(IntPtr handle, int type, [MarshalAs(UnmanagedType.LPWStr)] string objectPath, IntPtr sourceGUID, string attributeName, string value, int flag, int context, ref IntPtr info);
 
-        [SuppressUnmanagedCodeSecurityAttribute()]
         public delegate int DsReplicaGetInfoW(IntPtr handle, int type, [MarshalAs(UnmanagedType.LPWStr)] string objectPath, IntPtr sourceGUID, ref IntPtr info);
 
-        [SuppressUnmanagedCodeSecurityAttribute()]
         public delegate int DsReplicaFreeInfo(int type, IntPtr value);
 
-        [SuppressUnmanagedCodeSecurityAttribute()]
         public delegate int DsReplicaSyncW(IntPtr handle, [MarshalAs(UnmanagedType.LPWStr)] string partition, IntPtr uuid, int option);
 
-        [SuppressUnmanagedCodeSecurityAttribute()]
         public delegate int DsReplicaSyncAllW(IntPtr handle, [MarshalAs(UnmanagedType.LPWStr)] string partition, int flags, SyncReplicaFromAllServersCallback callback, IntPtr data, ref IntPtr error);
 
         [DllImport("kernel32.dll", EntryPoint = "LocalFree")]
@@ -674,10 +664,8 @@ namespace System.DirectoryServices.ActiveDirectory
         [DllImport("netapi32.dll", EntryPoint = "DsGetSiteNameW", CharSet = CharSet.Unicode)]
         public static extern int DsGetSiteName(string dcName, ref IntPtr ptr);
 
-        [SuppressUnmanagedCodeSecurityAttribute()]
         public delegate int DsListDomainsInSiteW(IntPtr handle, [MarshalAs(UnmanagedType.LPWStr)] string site, ref IntPtr info);
 
-        [SuppressUnmanagedCodeSecurityAttribute()]
         public delegate void DsFreeNameResultW(IntPtr result);
 
         [DllImport("Netapi32.dll", EntryPoint = "DsEnumerateDomainTrustsW", CharSet = CharSet.Unicode)]
@@ -687,7 +675,7 @@ namespace System.DirectoryServices.ActiveDirectory
         public static extern int NetApiBufferFree(IntPtr buffer);
 
         [DllImport("Advapi32.dll", EntryPoint = "LogonUserW", CharSet = CharSet.Unicode, SetLastError = true)]
-        public static extern int LogonUserW(String lpszUsername, String lpszDomain, String lpszPassword, int dwLogonType, int dwLogonProvider, ref IntPtr phToken);
+        public static extern int LogonUserW(string lpszUsername, string lpszDomain, string lpszPassword, int dwLogonType, int dwLogonProvider, ref IntPtr phToken);
 
         [DllImport("Advapi32.dll", EntryPoint = "ImpersonateLoggedOnUser", SetLastError = true)]
         public static extern int ImpersonateLoggedOnUser(IntPtr hToken);

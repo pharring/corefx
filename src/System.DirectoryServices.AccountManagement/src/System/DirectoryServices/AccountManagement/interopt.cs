@@ -19,12 +19,11 @@ namespace System.DirectoryServices.AccountManagement
     internal class Constants
     {
         private Constants() { }
-        internal static Byte[] GUID_USERS_CONTAINER_BYTE = new Byte[] { 0xa9, 0xd1, 0xca, 0x15, 0x76, 0x88, 0x11, 0xd1, 0xad, 0xed, 0x00, 0xc0, 0x4f, 0xd8, 0xd5, 0xcd };
-        internal static Byte[] GUID_COMPUTRS_CONTAINER_BYTE = new Byte[] { 0xaa, 0x31, 0x28, 0x25, 0x76, 0x88, 0x11, 0xd1, 0xad, 0xed, 0x00, 0xc0, 0x4f, 0xd8, 0xd5, 0xcd };
-        internal static Byte[] GUID_FOREIGNSECURITYPRINCIPALS_CONTAINER_BYTE = new Byte[] { 0x22, 0xb7, 0x0c, 0x67, 0xd5, 0x6e, 0x4e, 0xfb, 0x91, 0xe9, 0x30, 0x0f, 0xca, 0x3d, 0xc1, 0xaa };
+        internal static byte[] GUID_USERS_CONTAINER_BYTE = new byte[] { 0xa9, 0xd1, 0xca, 0x15, 0x76, 0x88, 0x11, 0xd1, 0xad, 0xed, 0x00, 0xc0, 0x4f, 0xd8, 0xd5, 0xcd };
+        internal static byte[] GUID_COMPUTRS_CONTAINER_BYTE = new byte[] { 0xaa, 0x31, 0x28, 0x25, 0x76, 0x88, 0x11, 0xd1, 0xad, 0xed, 0x00, 0xc0, 0x4f, 0xd8, 0xd5, 0xcd };
+        internal static byte[] GUID_FOREIGNSECURITYPRINCIPALS_CONTAINER_BYTE = new byte[] { 0x22, 0xb7, 0x0c, 0x67, 0xd5, 0x6e, 0x4e, 0xfb, 0x91, 0xe9, 0x30, 0x0f, 0xca, 0x3d, 0xc1, 0xaa };
     }
 
-    [SuppressUnmanagedCodeSecurityAttribute]
     internal class SafeNativeMethods
     {
         // To stop the compiler from autogenerating a constructor for this class
@@ -37,7 +36,6 @@ namespace System.DirectoryServices.AccountManagement
         static extern public int LsaNtStatusToWinError(int ntStatus);
     }
 
-    [SuppressUnmanagedCodeSecurityAttribute]
     internal class UnsafeNativeMethods
     {
         // To stop the compiler from autogenerating a constructor for this class
@@ -45,7 +43,6 @@ namespace System.DirectoryServices.AccountManagement
 
         [DllImport(ExternDll.Activeds, ExactSpelling = true, EntryPoint = "ADsOpenObject", CharSet = System.Runtime.InteropServices.CharSet.Unicode)]
         private static extern int IntADsOpenObject(string path, string userName, string password, int flags, [In, Out] ref Guid iid, [Out, MarshalAs(UnmanagedType.Interface)] out object ppObject);
-        [System.Security.SecurityCritical]
         public static int ADsOpenObject(string path, string userName, string password, int flags, [In, Out] ref Guid iid, [Out, MarshalAs(UnmanagedType.Interface)] out object ppObject)
         {
             try
@@ -54,7 +51,7 @@ namespace System.DirectoryServices.AccountManagement
             }
             catch (EntryPointNotFoundException)
             {
-                throw new InvalidOperationException(StringResources.AdsiNotInstalled);
+                throw new InvalidOperationException(SR.AdsiNotInstalled);
             }
         }
 
@@ -96,7 +93,6 @@ namespace System.DirectoryServices.AccountManagement
             int LowPart { get; set; }
         }
 
-        [SuppressUnmanagedCodeSecurityAttribute]
         [ComImport, Guid("927971f5-0939-11d1-8be1-00c04fd8d503")]
         public class ADsLargeInteger
         {
@@ -106,7 +102,7 @@ namespace System.DirectoryServices.AccountManagement
         public interface IAdsObjectOptions
         {
             [return: MarshalAs(UnmanagedType.Struct)]
-            Object GetOption(
+            object GetOption(
                 [In]
                 int option);
 
@@ -114,7 +110,7 @@ namespace System.DirectoryServices.AccountManagement
                 [In]
                 int option,
                 [In, MarshalAs(UnmanagedType.Struct)]
-                Object vProp);
+                object vProp);
         }
 
         [ComImport, Guid("FD8256D0-FD15-11CE-ABC4-02608C9E7553"), InterfaceTypeAttribute(ComInterfaceType.InterfaceIsDual)]
@@ -161,7 +157,7 @@ namespace System.DirectoryServices.AccountManagement
             void SetInfo();
 
             [return: MarshalAs(UnmanagedType.Struct)]
-            Object Get(
+            object Get(
                 [In, MarshalAs(UnmanagedType.BStr)]
                 string bstrName);
 
@@ -169,12 +165,12 @@ namespace System.DirectoryServices.AccountManagement
                 [In, MarshalAs(UnmanagedType.BStr)]
                 string bstrName,
                 [In, MarshalAs(UnmanagedType.Struct)]
-                Object vProp);
+                object vProp);
 
             [return: MarshalAs(UnmanagedType.Struct)]
-            Object GetEx(
+            object GetEx(
                 [In, MarshalAs(UnmanagedType.BStr)]
-                String bstrName);
+                string bstrName);
 
             void PutEx(
                 [In, MarshalAs(UnmanagedType.U4)]
@@ -182,11 +178,11 @@ namespace System.DirectoryServices.AccountManagement
                 [In, MarshalAs(UnmanagedType.BStr)]
                 string bstrName,
                 [In, MarshalAs(UnmanagedType.Struct)]
-                Object vProp);
+                object vProp);
 
             void GetInfoEx(
                 [In, MarshalAs(UnmanagedType.Struct)]
-                Object vProperties,
+                object vProperties,
                 [In, MarshalAs(UnmanagedType.U4)]
                 int lnReserved);
         }
@@ -235,7 +231,7 @@ namespace System.DirectoryServices.AccountManagement
             void SetInfo();
 
             [return: MarshalAs(UnmanagedType.Struct)]
-            Object Get(
+            object Get(
                 [In, MarshalAs(UnmanagedType.BStr)]
                 string bstrName);
 
@@ -243,12 +239,12 @@ namespace System.DirectoryServices.AccountManagement
                 [In, MarshalAs(UnmanagedType.BStr)]
                 string bstrName,
                 [In, MarshalAs(UnmanagedType.Struct)]
-                Object vProp);
+                object vProp);
 
             [return: MarshalAs(UnmanagedType.Struct)]
-            Object GetEx(
+            object GetEx(
                 [In, MarshalAs(UnmanagedType.BStr)]
-                String bstrName);
+                string bstrName);
 
             void PutEx(
                 [In, MarshalAs(UnmanagedType.U4)]
@@ -256,11 +252,11 @@ namespace System.DirectoryServices.AccountManagement
                 [In, MarshalAs(UnmanagedType.BStr)]
                 string bstrName,
                 [In, MarshalAs(UnmanagedType.Struct)]
-                Object vProp);
+                object vProp);
 
             void GetInfoEx(
                 [In, MarshalAs(UnmanagedType.Struct)]
-                Object vProperties,
+                object vProperties,
                 [In, MarshalAs(UnmanagedType.U4)]
                 int lnReserved);
 
@@ -305,7 +301,6 @@ namespace System.DirectoryServices.AccountManagement
             }
         }
 
-        [SuppressUnmanagedCodeSecurityAttribute]
         [ComImport, Guid("080d0d78-f421-11d0-a36e-00c04fb950dc")]
         public class Pathname
         {
@@ -344,7 +339,7 @@ namespace System.DirectoryServices.AccountManagement
             void RemoveLeafElement();
 
             [return: MarshalAs(UnmanagedType.Struct)]
-            Object CopyPath();
+            object CopyPath();
 
             [return: MarshalAs(UnmanagedType.BStr)]
             string GetEscapedElement(
@@ -564,9 +559,9 @@ namespace System.DirectoryServices.AccountManagement
         public static extern int CredUIParseUserName(
                                                                                         string pszUserName,
                                                                                         StringBuilder pszUser,
-                                                                                        System.UInt32 ulUserMaxChars,
+                                                                                        uint ulUserMaxChars,
                                                                                         StringBuilder pszDomain,
-                                                                                        System.UInt32 ulDomainMaxChars
+                                                                                        uint ulDomainMaxChars
                                                                                         );
 
         // These contants were taken from the wincred.h file

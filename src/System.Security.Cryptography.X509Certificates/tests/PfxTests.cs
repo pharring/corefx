@@ -15,12 +15,8 @@ namespace System.Security.Cryptography.X509Certificates.Tests
         {
             get
             {
-#if uap
-                yield break;
-#else
                 yield return new object[] { TestData.ECDsabrainpoolP160r1_Pfx };
                 yield return new object[] { TestData.ECDsabrainpoolP160r1_Explicit_Pfx };
-#endif
             }
         }
 
@@ -38,8 +34,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 Assert.Equal(expectedThumbprint, thumbPrint);
             }
         }
-
-#if netcoreapp
+        
         [Theory]
         [MemberData(nameof(StorageFlags))]
         public static void TestConstructor_SecureString(X509KeyStorageFlags keyStorageFlags)
@@ -55,7 +50,6 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 Assert.Equal(expectedThumbprint, thumbPrint);
             }
         }
-#endif
 
         [Theory]
         [MemberData(nameof(StorageFlags))]
@@ -119,8 +113,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 }
             }
         }
-
-#if netcoreapp
+        
         [Fact]
         public static void TestPrivateKeyProperty()
         {
@@ -136,11 +129,13 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 VerifyPrivateKey((RSA)alg);
 
                 // Currently unable to set PrivateKey
-                Assert.Throws<PlatformNotSupportedException>(() => c.PrivateKey = null);
-                Assert.Throws<PlatformNotSupportedException>(() => c.PrivateKey = alg);
+                if (!PlatformDetection.IsFullFramework)
+                {
+                    Assert.Throws<PlatformNotSupportedException>(() => c.PrivateKey = null);
+                    Assert.Throws<PlatformNotSupportedException>(() => c.PrivateKey = alg);
+                }
             }
         }
-#endif
 
         private static void VerifyPrivateKey(RSA rsa)
         {
@@ -179,8 +174,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 }
             }
         }
-
-#if netcoreapp
+        
         [Fact]
         public static void ECDsaPrivateKeyProperty_WindowsPfx()
         {
@@ -194,16 +188,20 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 Assert.Null(pubOnly.PrivateKey);
 
                 // Currently unable to set PrivateKey
-                Assert.Throws<PlatformNotSupportedException>(() => cert.PrivateKey = null);
+                if (!PlatformDetection.IsFullFramework)
+                {
+                    Assert.Throws<PlatformNotSupportedException>(() => cert.PrivateKey = null);
+                }
 
                 using (var privKey = cert.GetECDsaPrivateKey())
                 {
-                    Assert.Throws<PlatformNotSupportedException>(() => cert.PrivateKey = privKey);
-                    Assert.Throws<PlatformNotSupportedException>(() => pubOnly.PrivateKey = privKey);
+                    Assert.ThrowsAny<NotSupportedException>(() => cert.PrivateKey = privKey);
+                    Assert.ThrowsAny<NotSupportedException>(() => pubOnly.PrivateKey = privKey);
                 }
             }
         }
 
+#if !NO_DSA_AVAILABLE
         [Fact]
         public static void DsaPrivateKeyProperty()
         {
@@ -259,8 +257,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             {
                 // Windows 7, Windows 8, Ubuntu 14, CentOS, macOS can fail. Verify known good platforms don't fail.
                 Assert.False(PlatformDetection.IsWindows && PlatformDetection.WindowsVersion >= 10, "Is Windows 10");
-                Assert.False(PlatformDetection.IsUbuntu1604, "Is Ubuntu 16.04");
-                Assert.False(PlatformDetection.IsUbuntu1610, "Is Ubuntu 16.10");
+                Assert.False(PlatformDetection.IsUbuntu && !PlatformDetection.IsUbuntu1404, "Is Ubuntu 16.04 or up");
             }
         }
 
@@ -291,7 +288,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             }
         }
 
-#if netcoreapp
+#if !NO_DSA_AVAILABLE
         [Fact]
         public static void ReadDSAPrivateKey()
         {
@@ -313,7 +310,9 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 Assert.ThrowsAny<CryptographicException>(() => pubKey.SignData(data, HashAlgorithmName.SHA1));
             }
         }
+#endif
 
+#if !NO_EPHEMERALKEYSET_AVAILABLE
         [Fact]
         [PlatformSpecific(TestPlatforms.Windows)]  // Uses P/Invokes
         public static void EphemeralImport_HasNoKeyName()
@@ -361,7 +360,6 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 }
             }
         }
-#endif
 
         [Fact]
         [PlatformSpecific(TestPlatforms.Windows)]  // Uses P/Invokes
@@ -384,6 +382,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 Assert.NotNull(key.KeyName);
             }
         }
+#endif
 
         [Fact]
         [PlatformSpecific(TestPlatforms.Windows)]  // Uses P/Invokes

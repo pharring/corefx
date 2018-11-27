@@ -1,16 +1,11 @@
-﻿<?xml version="1.0" encoding="utf-8"?>
-<Project ToolsVersion="14.0" DefaultTargets="Build" xmlns="http://schemas.microsoft.com/developer/msbuild/2003">
-  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.props))\dir.props" />
+<Project Sdk="Microsoft.NET.Sdk">
   <PropertyGroup>
-    <AppDesignerFolder>Properties</AppDesignerFolder>
     <AllowUnsafeBlocks>true</AllowUnsafeBlocks>
-    <IncludePerformanceTests>true</IncludePerformanceTests>
     <ProjectGuid>{D9906F1A-A41A-43CD-81D2-BA94CF0001C9}</ProjectGuid>
+    <DisableTests Condition="'$(TargetGroup)' == 'uap' AND ('$(ArchGroup)' == 'arm' OR '$(ArchGroup)' == 'arm64')">true</DisableTests>
+    <Configurations>netcoreapp-Debug;netcoreapp-Release;netstandard-Debug;netstandard-Release</Configurations>
   </PropertyGroup>
-  <!-- Default configurations to help VS understand the configurations -->
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Debug|AnyCPU' " />
-  <PropertyGroup Condition=" '$(Configuration)|$(Platform)' == 'Release|AnyCPU' " />
-  <ItemGroup>
+  <ItemGroup Condition="'$(DisableTests)' != 'true'">
     <Compile Include="Vector2\Distance.cs" />
     <Compile Include="Vector2\GetHashCode.cs" />
     <Compile Include="Vector2\Length.cs" />
@@ -56,11 +51,31 @@
     <Compile Include="Vector2\AddOperator.cs" />
     <Compile Include="VectorTests.cs" />
   </ItemGroup>
-  <ItemGroup>
+  <ItemGroup Condition="'$(DisableTests)' != 'true'">
     <ProjectReference Include="$(CommonPath)\..\perf\PerfRunner\PerfRunner.csproj">
       <Project>{69e46a6f-9966-45a5-8945-2559fe337827}</Project>
       <Name>PerfRunner</Name>
     </ProjectReference>
   </ItemGroup>
-  <Import Project="$([MSBuild]::GetDirectoryNameOfFileAbove($(MSBuildThisFileDirectory), dir.targets))\dir.targets" />
+  <ItemGroup>
+    <Content Include="Constructor\GenericVectorConstructorTests.tt">
+      <Generator>TextTemplatingFileGenerator</Generator>
+      <LastGenOutput>GenericVectorConstructorTests.cs</LastGenOutput>
+    </Content>
+  </ItemGroup>
+  <ItemGroup>
+    <Compile Include="..\Util.cs">
+      <Link>Util.cs</Link>
+    </Compile>
+    <Compile Include="Constructor\GenericVectorConstructorTests.cs">
+      <AutoGen>True</AutoGen>
+      <DesignTime>True</DesignTime>
+      <DependentUpon>GenericVectorConstructorTests.tt</DependentUpon>
+    </Compile>
+  </ItemGroup>
+  <ItemGroup>
+    <None Include="..\..\..\Common\src\CoreLib\System\Numerics\GenerationConfig.ttinclude">
+      <Link>GenerationConfig.ttinclude</Link>
+    </None>
+  </ItemGroup>
 </Project>

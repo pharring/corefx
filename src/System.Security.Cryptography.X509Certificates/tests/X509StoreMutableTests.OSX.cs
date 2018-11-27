@@ -10,7 +10,31 @@ namespace System.Security.Cryptography.X509Certificates.Tests
     [PlatformSpecific(TestPlatforms.OSX)]
     public static class X509StoreMutableTests_OSX
     {
-        [Fact]
+        public static bool PermissionsAllowStoreWrite { get; } = TestPermissions();
+
+        private static bool TestPermissions()
+        {
+            try
+            {
+                AddToStore_Exportable();
+            }
+            catch (CryptographicException e)
+            {
+                const int errSecWrPerm = -61;
+
+                if (e.HResult == errSecWrPerm)
+                {
+                    return false;
+                }
+            }
+            catch
+            {
+            }
+
+            return true;
+        }
+
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
         public static void PersistKeySet_OSX()
         {
             using (var store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
@@ -37,7 +61,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             }
         }
 
-        [Fact]
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
         public static void AddToStore_NonExportable_OSX()
         {
             using (var store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
@@ -57,7 +81,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             }
         }
 
-        [Fact]
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
         public static void AddToStore_Exportable()
         {
             using (var store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
@@ -78,7 +102,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             }
         }
 
-        [Fact]
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
         public static void AddToStoreTwice()
         {
             using (var store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
@@ -102,7 +126,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             }
         }
 
-        [Fact]
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
         public static void AddPrivateAfterPublic()
         {
             using (var store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
@@ -128,7 +152,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             }
         }
 
-        [Fact]
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
         public static void AddPublicAfterPrivate()
         {
             using (var store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
@@ -155,7 +179,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             }
         }
 
-        [Fact]
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
         public static void VerifyRemove()
         {
             using (var store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
@@ -175,7 +199,7 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             }
         }
 
-        [Fact]
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
         public static void RemovePublicDeletesPrivateKey()
         {
             using (var store = new X509Store(StoreName.My, StoreLocation.CurrentUser))
@@ -203,6 +227,83 @@ namespace System.Security.Cryptography.X509Certificates.Tests
                 // Cleanup
                 store.Remove(certOnly);
             }
+        }
+
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
+        public static void CustomStore_ReadWrite()
+        {
+            using (var store = new X509Store("CustomKeyChain_CoreFX", StoreLocation.CurrentUser))
+            using (new TemporaryX509Store(store))
+            using (var cert = new X509Certificate2(TestData.PfxData, TestData.PfxDataPassword, X509KeyStorageFlags.Exportable))
+            using (var certOnly = new X509Certificate2(cert.RawData))
+            {
+                store.Open(OpenFlags.ReadWrite);
+
+                // Defensive removal.
+                store.Remove(certOnly);
+                Assert.False(IsCertInStore(cert, store), "PfxData certificate was found on pre-condition");
+
+                store.Add(cert);
+                Assert.True(IsCertInStore(certOnly, store), "PfxData certificate was found after add");
+
+                // Cleanup
+                store.Remove(certOnly);
+            }
+        }
+
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
+        public static void CustomStore_ReadOnly()
+        {
+            using (var store = new X509Store("CustomKeyChain_CoreFX", StoreLocation.CurrentUser))
+            using (new TemporaryX509Store(store))
+            using (var cert = new X509Certificate2(TestData.PfxData, TestData.PfxDataPassword, X509KeyStorageFlags.Exportable))
+            using (var certOnly = new X509Certificate2(cert.RawData))
+            {
+                store.Open(OpenFlags.ReadOnly);
+                Assert.ThrowsAny<CryptographicException>(() => store.Add(certOnly));
+            }
+        }
+
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
+        public static void CustomStore_OpenExistingOnly()
+        {
+            using (var store = new X509Store("CustomKeyChain_CoreFX_" + Guid.NewGuid().ToString(), StoreLocation.CurrentUser))
+            using (new TemporaryX509Store(store))
+            {
+                Assert.ThrowsAny<CryptographicException>(() => store.Open(OpenFlags.OpenExistingOnly));
+            }
+        }
+
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
+        public static void CustomStore_CaseInsensitive()
+        {
+            using (var store1 = new X509Store("CustomKeyChain_CoreFX", StoreLocation.CurrentUser))
+            using (new TemporaryX509Store(store1))
+            using (var store2 = new X509Store("customkeychain_CoreFX", StoreLocation.CurrentUser))
+            using (var cert = new X509Certificate2(TestData.PfxData, TestData.PfxDataPassword, X509KeyStorageFlags.Exportable))
+            using (var certOnly = new X509Certificate2(cert.RawData))
+            {
+                store1.Open(OpenFlags.ReadWrite);
+                store2.Open(OpenFlags.ReadOnly);
+
+                // Defensive removal.
+                store1.Remove(certOnly);
+                Assert.False(IsCertInStore(cert, store1), "PfxData certificate was found on pre-condition");
+
+                store1.Add(cert);
+                Assert.True(IsCertInStore(certOnly, store1), "PfxData certificate was found after add");
+                Assert.True(IsCertInStore(certOnly, store2), "PfxData certificate was found after add (second store)");
+
+                // Cleanup
+                store1.Remove(certOnly);
+            }
+        }
+
+        [ConditionalFact(nameof(PermissionsAllowStoreWrite))]
+        public static void CustomStore_InvalidFileName()
+        {
+            using (var store = new X509Store("../corefx", StoreLocation.CurrentUser))
+                Assert.ThrowsAny<CryptographicException>(() => store.Open(OpenFlags.ReadWrite));
         }
 
         private static bool StoreHasPrivateKey(X509Store store, X509Certificate2 forCert)
@@ -243,6 +344,22 @@ namespace System.Security.Cryptography.X509Certificates.Tests
             using (var coll = new ImportedCollection(store.Certificates))
             {
                 return coll.Collection.Count;
+            }
+        }
+
+        private class TemporaryX509Store : IDisposable
+        {
+            private X509Store _store;
+ 
+            public TemporaryX509Store(X509Store store)
+            {
+                _store = store;
+            }
+
+            public void Dispose()
+            {
+                if (_store.IsOpen)
+                    Interop.AppleCrypto.SecKeychainDelete(_store.StoreHandle, throwOnError: false);
             }
         }
     }

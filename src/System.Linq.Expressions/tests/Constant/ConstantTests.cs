@@ -282,7 +282,7 @@ namespace System.Linq.Expressions.Tests
 #if FEATURE_COMPILE
         private static TypeBuilder GetTypeBuilder()
         {
-            AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("Name"), AssemblyBuilderAccess.Run);
+            AssemblyBuilder assembly = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("Name"), AssemblyBuilderAccess.RunAndCollect);
             ModuleBuilder module = assembly.DefineDynamicModule("Name");
             return module.DefineType("Type");
         }
@@ -313,7 +313,7 @@ namespace System.Linq.Expressions.Tests
 
         private static MethodInfo GlobalMethod(params Type[] parameterTypes)
         {
-            ModuleBuilder module = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("Name"), AssemblyBuilderAccess.Run).DefineDynamicModule("Module");
+            ModuleBuilder module = AssemblyBuilder.DefineDynamicAssembly(new AssemblyName("Name"), AssemblyBuilderAccess.RunAndCollect).DefineDynamicModule("Module");
             MethodBuilder globalMethod = module.DefineGlobalMethod("GlobalMethod", MethodAttributes.Public | MethodAttributes.Static, typeof(void), parameterTypes);
             globalMethod.GetILGenerator().Emit(OpCodes.Ret);
             module.CreateGlobalFunctions();
@@ -956,44 +956,44 @@ namespace System.Linq.Expressions.Tests
         public static void InvalidTypeValueType()
         {
             // implicit cast, but not reference assignable.
-            Assert.Throws<ArgumentException>(null, () => Expression.Constant(0, typeof(long)));
+            AssertExtensions.Throws<ArgumentException>(null, () => Expression.Constant(0, typeof(long)));
         }
 
         [Fact]
         public static void InvalidTypeReferenceType()
         {
-            Assert.Throws<ArgumentException>(null, () => Expression.Constant("hello", typeof(Expression)));
+            AssertExtensions.Throws<ArgumentException>(null, () => Expression.Constant("hello", typeof(Expression)));
         }
 
         [Fact]
         public static void NullType()
         {
-            Assert.Throws<ArgumentNullException>("type", () => Expression.Constant("foo", null));
+            AssertExtensions.Throws<ArgumentNullException>("type", () => Expression.Constant("foo", null));
         }
 
         [Fact]
         public static void ByRefType()
         {
-            Assert.Throws<ArgumentException>(() => Expression.Constant(null, typeof(string).MakeByRefType()));
+            AssertExtensions.Throws<ArgumentException>("type", () => Expression.Constant(null, typeof(string).MakeByRefType()));
         }
 
         [Fact]
         public static void PointerType()
         {
-            Assert.Throws<ArgumentException>("type", () => Expression.Constant(null, typeof(string).MakePointerType()));
+            AssertExtensions.Throws<ArgumentException>("type", () => Expression.Constant(null, typeof(string).MakePointerType()));
         }
 
         [Fact]
         public static void GenericType()
         {
-            Assert.Throws<ArgumentException>(() => Expression.Constant(null, typeof(List<>)));
+            AssertExtensions.Throws<ArgumentException>("type", () => Expression.Constant(null, typeof(List<>)));
         }
 
         [Fact]
         public static void TypeContainsGenericParameters()
         {
-            Assert.Throws<ArgumentException>(() => Expression.Constant(null, typeof(List<>.Enumerator)));
-            Assert.Throws<ArgumentException>(() => Expression.Constant(null, typeof(List<>).MakeGenericType(typeof(List<>))));
+            AssertExtensions.Throws<ArgumentException>("type", () => Expression.Constant(null, typeof(List<>.Enumerator)));
+            AssertExtensions.Throws<ArgumentException>("type", () => Expression.Constant(null, typeof(List<>).MakeGenericType(typeof(List<>))));
         }
 
         [Fact]

@@ -5,7 +5,7 @@
 using System.Runtime.InteropServices;
 using System.Threading.Tasks;
 using Xunit;
-using Xunit.NetCore.Extensions;
+using Microsoft.DotNet.XUnitExtensions;
 
 namespace System.IO.Compression.Tests
 {
@@ -53,16 +53,20 @@ namespace System.IO.Compression.Tests
         }
 
         [Theory]
-        [InlineData("small")]
-        [InlineData("normal")]
-        [InlineData("empty")]
-        [InlineData("emptydir")]
-        public static async Task CreateNormal_Seekable(string folder)
+        [InlineData("small", false, false)]
+        [InlineData("normal", false, false)]
+        [InlineData("empty", false, false)]
+        [InlineData("emptydir", false, false)]
+        [InlineData("small", true, false)]
+        [InlineData("normal", true, false)]
+        [InlineData("small", false, true)]
+        [InlineData("normal", false, true)]
+        public static async Task CreateNormal_Seekable(string folder, bool useSpansForWriting, bool writeInChunks)
         {
             using (var s = new MemoryStream())
             {
                 var testStream = new WrappedStream(s, false, true, true, null);
-                await CreateFromDir(zfolder(folder), testStream, ZipArchiveMode.Create);
+                await CreateFromDir(zfolder(folder), testStream, ZipArchiveMode.Create, useSpansForWriting, writeInChunks);
 
                 IsZipSameAsDir(s, zfolder(folder), ZipArchiveMode.Read, requireExplicit: true, checkTimes: true);
             }

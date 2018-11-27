@@ -16,7 +16,6 @@ namespace System.DirectoryServices.AccountManagement
 {
     internal class AuthZSet : ResultSet
     {
-        [System.Security.SecurityCritical]
         internal AuthZSet(
                     byte[] userSid,
                     NetCred credentials,
@@ -187,9 +186,9 @@ namespace System.DirectoryServices.AccountManagement
                     GlobalDebug.WriteLineIf(GlobalDebug.Warn, "AuthZSet", "Failed to retrieve group list, {0}", lastError);
 
                     throw new PrincipalOperationException(
-                                    String.Format(
+                                    string.Format(
                                             CultureInfo.CurrentCulture,
-                                            StringResources.AuthZFailedToRetrieveGroupList,
+                                            SR.AuthZFailedToRetrieveGroupList,
                                             lastError));
                 }
 
@@ -212,10 +211,10 @@ namespace System.DirectoryServices.AccountManagement
 
                 // We're on a platform that doesn't have the AuthZ library
                 if (e is DllNotFoundException)
-                    throw new NotSupportedException(StringResources.AuthZNotSupported, e);
+                    throw new NotSupportedException(SR.AuthZNotSupported, e);
 
                 if (e is EntryPointNotFoundException)
-                    throw new NotSupportedException(StringResources.AuthZNotSupported, e);
+                    throw new NotSupportedException(SR.AuthZNotSupported, e);
 
                 throw;
             }
@@ -234,7 +233,6 @@ namespace System.DirectoryServices.AccountManagement
 
         override internal object CurrentAsPrincipal
         {
-            [System.Security.SecurityCritical]
             get
             {
                 Debug.Assert(_currentGroup >= 0 && _currentGroup < _groupSidList.Length);
@@ -393,7 +391,7 @@ namespace System.DirectoryServices.AccountManagement
                 else
                 {
                     Debug.Assert((_userType == ContextType.Domain) &&
-                                  (String.Compare(Utils.GetComputerFlatName(), sidIssuerName, StringComparison.OrdinalIgnoreCase) != 0));
+                                 !string.Equals(Utils.GetComputerFlatName(), sidIssuerName, StringComparison.OrdinalIgnoreCase));
 
                     // It's a domain group, because it's a domain user and the SID issuer isn't the local machine
 
@@ -442,14 +440,13 @@ namespace System.DirectoryServices.AccountManagement
                 if (group == null)
                 {
                     GlobalDebug.WriteLineIf(GlobalDebug.Warn, "AuthZSet", "CurrentAsPrincipal: Couldn't find group {0}");
-                    throw new NoMatchingPrincipalException(StringResources.AuthZCantFindGroup);
+                    throw new NoMatchingPrincipalException(SR.AuthZCantFindGroup);
                 }
 
                 return group;
             }
         }
 
-        [System.Security.SecurityCritical]
         override internal bool MoveNext()
         {
             bool needToRetry;
@@ -506,7 +503,6 @@ namespace System.DirectoryServices.AccountManagement
         }
 
         // IDisposable implementation        
-        [System.Security.SecurityCritical]
         public override void Dispose()
         {
             try
@@ -577,9 +573,6 @@ namespace System.DirectoryServices.AccountManagement
         //
         // Guarantees finalization of the native resources
         //
-#pragma warning disable 618    // Have not migrated to v4 transparency yet
-        [System.Security.SecurityCritical(System.Security.SecurityCriticalScope.Everything)]
-#pragma warning restore 618
         private sealed class SafeMemoryPtr : SafeHandle
         {
             private SafeMemoryPtr() : base(IntPtr.Zero, true)
@@ -655,7 +648,7 @@ namespace System.DirectoryServices.AccountManagement
                                 GlobalDebug.WriteLineIf(GlobalDebug.Warn, "AuthZSet", "SidList: couldn't get policy handle, err={0}", err);                                                                
 
                                 throw new PrincipalOperationException(String.Format(CultureInfo.CurrentCulture,
-                                                                           StringResources.AuthZErrorEnumeratingGroups,
+                                                                           SR.AuthZErrorEnumeratingGroups,
                                                                            SafeNativeMethods.LsaNtStatusToWinError(err)));
                             }
 
@@ -677,7 +670,7 @@ namespace System.DirectoryServices.AccountManagement
                                 GlobalDebug.WriteLineIf(GlobalDebug.Warn, "AuthZSet", "SidList: LsaLookupSids failed, err={0}", err);                                                                
 
                                 throw new PrincipalOperationException(String.Format(CultureInfo.CurrentCulture,
-                                                                           StringResources.AuthZErrorEnumeratingGroups,
+                                                                           SR.AuthZErrorEnumeratingGroups,
                                                                            SafeNativeMethods.LsaNtStatusToWinError(err)));
                             }
 
